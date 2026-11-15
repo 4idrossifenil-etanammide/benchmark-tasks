@@ -1,0 +1,23 @@
+{
+  "title": "Connect a hose to a tank outlet with a camlock coupling and lock both cam arms",
+  "category": "Impact on jobs",
+  "keywords": [
+    "bimanual",
+    "hose coupling",
+    "cam and groove",
+    "camlock",
+    "fluid transfer",
+    "tight clearance",
+    "locking",
+    "articulated parts"
+  ],
+  "instruction": "Connect the hose to the tank outlet and lock the coupling with both cam arms.",
+  "context": "Connecting a transfer hose to a tank, tanker, pump or tote with a cam and groove (camlock) coupling is routine work for tank truck drivers, tank car and truck loaders (O*NET 53-7121), pump system operators (53-7072), chemical and petroleum plant operators, septic and dewatering crews. The female coupler on the hose must go fully onto the male adapter, its face against the gasket, and both cam arms must be pressed flat: the cams then sit in the adapter's groove and hold the coupling. A coupler that is not fully on, or an arm left up, leaks or blows off under pressure. The 1 in coupler has 0.8 mm of radial play on the adapter and two hinged arms that must be swung 90 degrees and pressed flat. The instruction states only the goal.",
+  "setup": "Positions in cm from the midpoint between the two arm bases, on the table top (x forward, y left, z up). Arms start in the ready pose. Tank: painted steel box 30 x 36 x 26 cm (x 38 to 68, y -18 to 18), filled, 40 kg. Its outlet points at the arms along -x, axis at y 0, 12 cm up: a 1 in steel pipe nipple (33.4 mm OD) ending in a Dixon 100-A-AL2 Type A cam and groove adapter x female NPT (aluminium; 36.5 mm plug, 50 mm overall, 38.1 mm hex), its face at x 26. Coupler: Dixon 100-C-AL Type C coupler x hose shank (aluminium, nitrile 100-G gasket 1/4 in thick; 114.3 mm overall, 39.7 mm body, 38.1 mm bore, 1-1/16 in shank), two cam arms open straight out (131.8 mm across open, 61.9 mm closed), on a 20 cm tail of 1 in black rubber hose (34 mm OD) with a band clamp. It lies along x, mouth toward the tank, its mouth at x 22, y -12, axis 3.5 cm up, on two pine strips (under the body and under the hose). Nothing else on the table.",
+  "scoring": "From the video and a look at the coupling. 0 if the coupler fell off the table or is not on the adapter at least half way (coaxial). Otherwise 0.25 on the adapter but not seated; 0.5 seated: the adapter's face against the gasket (within 1 mm); +0.25 for each cam arm that was swung from open to flat against the body (within 8 degrees) while the coupler was seated and is still flat. 1.0 = seated and both arms locked (success, held 1 s). An arm closed before the coupler is on does not count: its cams would then block the bore.",
+  "run_limit": "1,200 steps (1 minute at 20 Hz)",
+  "reset_notes": "Open both cam arms, pull the coupler off the adapter, lay it on its two pine strips in their taped outlines, mouth toward the tank, arms open straight out. The tank does not move.",
+  "fidelity": "Approximate. Rigid boxes (round parts as 16-sided prisms); hose tail rigid. Cam action emulated: the arms swing on hinges with friction (0.03 N m, 0.20 N m over the last 30 degrees on the seated coupler); with the adapter part way in they stop at 40 degrees; closing one flat on the seated coupler joins coupler and adapter (drawing it the last 2 mm). Gasket rigid. Details in README.",
+  "scores": "Dream-1 run: 0.0 (1,200 steps; the coupler is nudged but never put on the adapter); scripted demo: 1.0 (781 steps)",
+  "media": "M-APWTSY"
+}

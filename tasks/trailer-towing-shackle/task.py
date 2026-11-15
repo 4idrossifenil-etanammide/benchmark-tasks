@@ -6,15 +6,15 @@
   block's top (lug centre 7 cm above the table), with a 19 mm round hole 30 mm out from the block;
 - a 1/2 in screw-pin D shackle without its pin (galvanised steel, 0.25 kg): 12.7 mm bar, two round ears 30 mm across
   and 12.7 mm thick with 20.6 mm between them, 47.8 mm inside length. The upper ear has a plain 17.5 mm hole; the
-  lower ear is threaded 5/8-11 UNC (2.31 mm per turn) for its bottom 5.8 mm, under a 6.9 mm plain bore. It stands upright in a
+  lower ear is threaded 5/8-11 UNC (2.31 mm per turn) through its whole 12.7 mm. It stands upright in a
   pine stand (a 10 mm base with a slot that holds its lower ear and lower bar), threaded ear down, bow toward the
   robot, left of the block;
 - its screw pin (steel, red, 0.11 kg): a 15.8 mm pin 46 mm long under a 25 mm collar, with a flat eye 26 mm wide and
   8 mm thick on top. It stands eye up in a hole through a pine block (40 x 40 x 30 mm), right of the block.
 
 The robot must put the shackle on the lug (the lug between its ears), push the pin through the upper ear, the lug
-and into the lower ear, and screw it fully home: two and a half clockwise turns (seen from above) from the thread's first catch
-seat its collar on the upper ear.
+and into the lower ear, and screw it fully home: five and a half clockwise turns (seen from above) from the thread's first
+catch bring its collar onto the upper ear, and it is then tightened against it by hand (hand-tight).
 
 Run it:  inspect-robots run --embodiment yam_arena -E task=task.py -E object_jitter=0 --scorer task_score ...
 """
@@ -106,19 +106,20 @@ def wheel(name, yc):
 TRAILER = DECK + wheel("wheel_l", YH + DW + WW / 2 + 0.002) + wheel("wheel_r", YH - DW - WW / 2 - 0.002)
 
 # -- the shackle (origin: on the pin axis midway between the ears; pin axis z, bow toward -x) -------------------------
-PITCH, TURNS = 0.0254 / 11, 2.5     # 5/8-11 UNC thread; two and a half turns from the first catch to seated
-TRAVEL = PITCH * TURNS               # 5.8 mm (shortened from the real pin's full-ear thread to fit the 60 s run)
+PITCH = 0.0254 / 11                  # 5/8-11 UNC thread: 2.31 mm per turn
+TURNS = 0.0127 / PITCH               # 5.5 turns: the thread runs through the whole 12.7 mm lower ear
+TRAVEL = PITCH * TURNS               # 12.7 mm
 GAP, EAR_T, EAR_R, BAR = 0.0206, 0.0127, 0.0151, 0.0127   # Crosby G-209 1/2 in: A 20.6, F 30.2, D 12.7 mm
 EAR_IN = GAP / 2                     # 10.3 mm: the ears' inner faces
 EAR_OUT = EAR_IN + EAR_T             # 23.0 mm: their outer faces
 HOLE_A, MINOR_A = 0.00875, 0.00675   # plain hole (17.5 mm) and thread minor diameter (13.5 mm), as apothems
-LEAD = EAR_T - TRAVEL                # 6.9 mm plain bore above the threaded part of the lower ear
+LEAD = EAR_T - TRAVEL                # 0: threaded over its whole thickness
 STEP = -EAR_IN - LEAD                # where the pin's end rests before the thread catches
 LEG_Z = EAR_IN + BAR / 2             # 16.65 mm: the bars' centre lines
 APEX_X = -(0.0478 + BAR / 2)         # 47.8 mm inside length
 SHACKLE_BOXES = (
     ring(HOLE_A, EAR_R, EAR_IN, EAR_OUT, GALV)                                     # upper ear: plain hole
-    + ring(HOLE_A, EAR_R, -EAR_IN - LEAD, -EAR_IN, GALV)                           # lower ear: lead-in
+    + (ring(HOLE_A, EAR_R, -EAR_IN - LEAD, -EAR_IN, GALV) if LEAD > 1e-4 else [])  # lower ear: lead-in, if any
     + ring(MINOR_A, EAR_R, -EAR_OUT, -EAR_IN - LEAD, GALV)                         # lower ear: threaded
     + [((( -EAR_R + 0.0005 + APEX_X) / 2, 0.0, s * LEG_Z), (-(EAR_R - 0.0005) - APEX_X, BAR, BAR), GALV) for s in (1, -1)]
     + [((APEX_X, 0.0, 0.0), (BAR, BAR, 2 * EAR_OUT), GALV)])
@@ -183,7 +184,8 @@ OBJECTS = BLOCK + TRAILER + STAND + HOLDER + [SHACKLE, PIN]
 # h: the pin's origin above its seat (m). The thread wants h = PITCH * (TURNS - n / 2 pi).
 FRICTION = 0.05                 # N m: running torque of the thread (hand-turned, free running)
 SLACK = math.radians(30)        # give: the pin can be turned 30 degrees past where its height says it should be
-SEATED = 0.001                  # m: a collar within 1 mm of the ear is seated
+CONTACT = 0.0003                # m: the collar on the ear (contact; 0.3 mm allows for the solver's give)
+TIGHT = 0.3                     # N m: tightened against the seat at least this hard = hand-tight (see README)
 RELEASE = math.radians(10)      # unscrewed 10 degrees past the first catch: the pin is off the thread
 SETTLE = 60                     # physics steps (0.25 s) after a catch in which the pin settles on the thread
 
@@ -198,14 +200,17 @@ class Thread:
 
     def reset(self, n: float) -> None:
         self.anchor = n
+        self.torque = 0.0
         self.settle = SETTLE
 
     def step(self, n: float, h: float) -> tuple[float, float]:
         pull = K_ROT * (self.anchor - n)  # breakaway friction: a stiff spring to an anchor that slips
         if abs(pull) > FRICTION:
             self.anchor = n + math.copysign(FRICTION, pull) / K_ROT
-        n_max = 2 * math.pi * (TURNS - h / PITCH) + SLACK  # it cannot turn further on than its height allows
+        # it cannot turn further on than its height allows; with the collar on the ear the seat is a hard stop
+        n_max = 2 * math.pi * TURNS if h <= CONTACT else 2 * math.pi * (TURNS - h / PITCH) + SLACK
         self.anchor = min(self.anchor, n_max)
+        self.torque = K_ROT * max(0.0, n - self.anchor)  # torque the seat takes when the pin is turned against it
         if self.settle > 0:
             self.settle -= 1
         return self.anchor, thread_height(n)
@@ -242,7 +247,7 @@ _DEBUG = [0] if os.environ.get("SHACKLE_DEBUG") else []
 
 def _reset_state(environment=None) -> None:
     THREAD.reset(0.0)
-    _STATE.update(engaged=False, n=0.0, twist=None, dropped=False, catches=0)
+    _STATE.update(engaged=False, n=0.0, twist=None, dropped=False, catches=0, tight=False, max_torque=0.0)
     if environment is not None:
         set_attached(environment, "pin", False)
         set_collision(environment, "pin", THREADED, True)
@@ -294,7 +299,9 @@ def _thread(environment) -> None:
             ang = math.degrees(math.acos(max(-1.0, min(1.0, float(shackle.rotation()[2, 2])))))
             print(f"[shackle] t {_DEBUG[0] / 240:6.2f} s  shackle {np.round(shackle.pos * 1000, 1)} tilt {ang:4.1f}  "
                   f"pin {np.round(pin.pos * 1000, 1)}  pin in shackle {np.round(p * 1000, 1)} tilt "
-                  f"{math.degrees(tilt):4.1f}  engaged {_STATE['engaged']} n {math.degrees(_STATE['n']):7.1f}", flush=True)
+                  f"{math.degrees(tilt):4.1f}  engaged {_STATE['engaged']} n {math.degrees(_STATE['n']):7.1f}  "
+                  f"h {(shackle.to_local(pin.pos)[2] - Z_SEAT) * 1000:6.2f} mm  torque {THREAD.torque:5.2f} "
+                  f"(max {_STATE['max_torque']:5.2f}) tight {_STATE['tight']}", flush=True)
     if not _STATE["engaged"]:
         if can_catch(shackle, pin):
             THREAD.reset(0.0)
@@ -311,6 +318,11 @@ def _thread(environment) -> None:
     n = _STATE["n"]
     h = float(shackle.to_local(pin.pos)[2] - Z_SEAT)
     target, height = THREAD.step(n, h)
+    if h <= CONTACT:  # collar on the ear: tightened against it hard enough, it is hand-tight (and stays so)
+        _STATE["max_torque"] = max(_STATE["max_torque"], THREAD.torque)
+        _STATE["tight"] |= THREAD.torque >= TIGHT
+    elif h > CONTACT + PITCH / 8:  # backed off (unscrewed 1/8 turn): no longer tight
+        _STATE["tight"] = False
     set_attach_target(environment, "pin", _wrap(twist - (target - n)), height)
     if n < -RELEASE:
         set_attached(environment, "pin", False)  # unscrewed off the thread
@@ -355,7 +367,7 @@ def _update(objects) -> float:
         return 0.0
     if _STATE["engaged"]:
         h = float(shackle.to_local(pin.pos)[2] - Z_SEAT)
-        if h <= SEATED:
+        if h <= CONTACT and _STATE["tight"]:
             return 1.0
         if _STATE["n"] >= 2 * math.pi:
             return 0.5
@@ -363,13 +375,14 @@ def _update(objects) -> float:
 
 
 def success(objects) -> bool:
-    """Pin through the upper ear, the lug and the threaded ear, its collar seated (within 1 mm); held 1 s."""
+    """Pin through the upper ear, the lug and the threaded ear, its collar on the ear and hand-tight; held 1 s."""
     return _update(objects) == 1.0
 
 
 def score(objects) -> float:
     """0 if the shackle or the pin fell off the table, or the pin is not through the lug and both ears. Otherwise 0.25
-    pin through all three, not threaded; 0.5 threaded at least one turn, not seated; 1.0 collar seated (1 mm or less)."""
+    pin through all three, not threaded; 0.5 threaded at least one turn, not seated and tight; 1.0 collar on the ear
+    (within 0.3 mm) and tightened against it (hand-tight)."""
     return _update(objects)
 
 
@@ -504,7 +517,7 @@ def plan(route: str = "demo") -> dict[str, list]:
     left = _left(t_rest - t_in + 0.5)
     t_free = sum(w[0] for w in left[:11])         # the left hand is clear of the shackle
     right += [(max(0.5, t_free - t_rest), right[-1][1], right[-1][2], -0.012, "wait for the left hand")]
-    # two and a half turns, in half turns with a regrip between them; the last goes 35 degrees further (the wrist's limit)
+    # five and a half turns, in half turns with a regrip between them; the last goes 35 degrees further (the wrist's limit)
     # because the fingers slip a little on the eye, and one spare half turn follows in case it is not seated yet
     n = int(round(2 * TURNS))
     right += _strokes(n + 1, TRAVEL, extra=math.radians(35), extra_at=n - 1)

@@ -27,12 +27,21 @@ def test_text_is_ascii():
 
 
 def test_real_thread():
-    # 5/8-11 UNC: 2.31 mm a turn; five full turns from the first catch to the collar seated
+    # 5/8-11 UNC: 2.31 mm a turn, threaded through the whole 12.7 mm ear: 5.5 turns from the first catch to seated
     assert abs(task.PITCH - 0.0254 / 11) < 1e-9
     assert abs(task.thread_height(0.0) - task.TRAVEL) < 1e-9
-    assert task.thread_height(2 * math.pi * task.TURNS) == 0.0
-    assert task.thread_height(2 * math.pi * (task.TURNS - 1)) > task.SEATED  # one turn short is not seated
-    assert 0 < task.LEAD < task.EAR_T
+    assert abs(task.thread_height(2 * math.pi * task.TURNS)) < 1e-12
+    assert abs(task.TURNS - 5.5) < 0.01 and abs(task.TRAVEL - task.EAR_T) < 1e-9
+    assert task.thread_height(2 * math.pi * task.TURNS - 1.0) > task.CONTACT  # 57 degrees short: not on the ear
+
+
+def test_hand_tight_needs_torque_on_the_seat():
+    t = task.Thread()
+    full = 2 * math.pi * task.TURNS
+    t.step(full, 0.0)
+    assert t.torque < task.TIGHT                    # just touching: not tight
+    t.step(full + 1.5 * task.TIGHT / task.K_ROT, 0.0)
+    assert t.torque >= task.TIGHT                   # turned on against the seat: tight
 
 
 def test_demo_turns_enough():

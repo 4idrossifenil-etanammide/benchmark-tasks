@@ -1,0 +1,23 @@
+{
+  "title": "Write the use-by date on a food container's label with a marker",
+  "category": "Impact on jobs",
+  "keywords": [
+    "bimanual",
+    "writing",
+    "tool use",
+    "marker",
+    "curved surface",
+    "contact following",
+    "food service",
+    "date marking"
+  ],
+  "instruction": "Write the use-by date 11/22 on the container's label.",
+  "context": "Prep cooks and food preparation workers label every container of prepared food they put in the walk-in: the FDA Food Code (section 3-501.17) requires ready-to-eat, time/temperature control for safety food held more than 24 hours to be marked with the day by which it must be used or discarded (at most 7 days). In most kitchens this is done by hand with a permanent marker on a strip of masking tape stuck on the container's side. The robot must hold a light container steady, pick up a marker and write a short date legibly on a curved, tapered surface, keeping the tip in light contact along each stroke and lifting it between strokes, then put the marker down. The instruction states only the goal.",
+  "setup": "Positions in cm from the midpoint between the two arm bases, on the table top (x forward, y left, z up). Arms start in the ready pose. Container: Bare by Solo DM32R-0090 32 oz round deli container, clear recycled PET, 8.81 cm across the bottom, 11.71 cm across the top, 14.5 cm tall, with its recessed lid on, about half full of tomato sauce (0.5 kg in all); centre at x 30, y 0, on a taped outline. Label: a strip of Scotch 2050 masking tape, 48 mm wide, about 10.5 cm long, around the side facing the right arm (front right), 5.1 to 9.9 cm above the table, blank. Marker: black Sharpie Fine Point (30001), cap off, 12.3 cm long, 11 mm barrel, lying on the table along x, tip forward, its middle at x 20, y -17. Nothing else on the table.",
+  "scoring": "A person reads the label after the trial. 0 if the container was tipped over or pushed more than 3 cm off its outline, or if more than 2 cm of line went on the container off the tape. Otherwise each character of the date gets 0 to 1: 1 if it reads as that character and its strokes are all there, partial if strokes are missing, 0 if it reads as something else or is scribbled over. Score = 0.8 x the mean over the characters, + 0.2 if every character is fully legible and the marker lies on the table, let go. Characters 2.4 to 3.6 cm tall, anywhere on the tape, count. 1.0 = success (held 1 s).",
+  "run_limit": "1,600 steps (80 s at 20 Hz)",
+  "reset_notes": "Replace the tape strip with a blank one at the same height (5.1 to 9.9 cm), container on its outline with the strip facing the right arm, marker on its outline, cap off.",
+  "fidelity": "Approximate. Rigid boxes (container side as 40 flat facets). Ink emulated: a 1 mm dot is laid every 0.5 mm wherever the marker tip is within 0.5 mm of the container's surface; no pressure, angle or ink-flow model. The reader is an automatic stroke-template match standing in for a person reading the label (README). Container mass and lid our estimates.",
+  "scores": "Dream-1 run: 0.0 (1,600 steps; the marker is never picked up); scripted demo: 1.0 (955 steps)",
+  "media": "M-79CY38"
+}

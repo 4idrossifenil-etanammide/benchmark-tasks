@@ -10,8 +10,9 @@ in until its collar sits on the upper ear and the pin is hand-tight.
 
 ## Why this task
 
-Coupling a trailer, cart or skip to whatever will tow it is routine work for industrial truck and tractor operators
-(O*NET 53-7051, about 800,000 US workers) and riggers (O*NET 49-9096). **How the shackle is used for towing:** the
+The screw-pin shackle is standard rigging and towing hardware, used wherever a strap, chain or sling has to be fixed
+to a lug: towing trailers, carts and skips, vehicle recovery, farming, construction, marine work and lifting.
+**How the shackle is used for towing:** the
 shackle pinned through the drawbar's towing lug is the attachment point; the tow strap or chain from the towing
 vehicle (a tractor, tug or forklift) is looped over the shackle's bow, and the pull goes through the bow, the pin and
 the lug. The pin is what holds the trailer: it must be screwed fully home, collar on the ear and hand-tight, or it can

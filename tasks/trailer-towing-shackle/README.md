@@ -10,8 +10,25 @@ in until its collar sits on the upper ear and the pin is hand-tight.
 
 ## Why this task
 
-The screw-pin shackle is standard rigging and towing hardware, used wherever a strap, chain or sling has to be fixed
-to a lug: towing trailers, carts and skips, vehicle recovery, farming, construction, marine work and lifting.
+The screw-pin shackle is standard rigging and towing hardware: a sling, strap or chain is attached to a lug or eye by
+pinning a shackle through it and screwing the pin home. O*NET (release 30.0, Tools Used file, commodity 24101641
+"Shackle") lists shackles among the tools of these occupations, with US employment from BLS OEWS (May 2025):
+
+| Occupation (O*NET-SOC) | US workers |
+|---|---|
+| HVAC mechanics and installers (49-9021) | 409,670 |
+| Glaziers (47-2121) | 58,480 |
+| Roustabouts, oil and gas (47-5071) | 44,970 |
+| Crane and tower operators (53-7021) | 42,890 |
+| Boilermakers (47-2011) | 10,190 |
+| Wind turbine service technicians (49-9081) | 9,980 |
+| Helpers, roofers (47-3016) | 6,030 |
+| **Total** | **582,210** |
+
+The same operation couples tow straps and chains to towing lugs in vehicle recovery and farming.
+Sources: https://www.onetcenter.org/dl_files/database/db_30_0_text/Tools%20Used.txt and
+https://www.bls.gov/oes/ (national estimates by occupation).
+
 **How the shackle is used for towing:** the
 shackle pinned through the drawbar's towing lug is the attachment point; the tow strap or chain from the towing
 vehicle (a tractor, tug or forklift) is looped over the shackle's bow, and the pull goes through the bow, the pin and

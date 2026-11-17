@@ -1,15 +1,17 @@
 """On the station table:
 
-- a filled 32 oz round clear plastic deli container (Bare by Solo DM32R-0090, recycled PET: 88.1 mm across the
-  bottom, 117.1 mm across the top, 145 mm tall) with its recessed lid on, about 0.5 kg with the food in it, standing
-  upright in front of the robot, centre 34 cm forward on the midline;
-- a strip of beige masking tape (Scotch 2050, 48 mm wide, about 10 cm long) stuck around the container's side, facing
-  the robot, from 51 to 99 mm above the table: the label. It is blank;
-- a black Sharpie Fine Point permanent marker (cap already off, 123 mm long, 11 mm barrel, bullet tip) lying on the
-  table to the right of the container, tip pointing forward.
+- a 32 oz round clear plastic deli container (Bare by Solo DM32R-0090, recycled PET: 88.1 mm across the bottom,
+  117.1 mm across the top, 145 mm tall) holding about 470 ml of water, its recessed lid on and taped shut, 0.5 kg in
+  all, standing upright in front of the robot, centre 30 cm forward on the midline;
+- a strip of beige masking tape (Scotch 2050, 48 mm wide, about 10.5 cm long) stuck around the container's side,
+  facing the right arm, from 51 to 99 mm above the table: the label. It is blank;
+- a black Sharpie Fine Point permanent marker (cap already off, 123 mm long, 11 mm barrel, bullet tip) lying on a
+  sheet of copy paper (US letter folded in half, 216 x 140 mm) on the table to the right of the container, tip
+  pointing forward.
 
 The robot must write the use-by date given in the instruction on the label with the marker, so that a person can
-read it, and put the marker down on the table. The marker leaves ink only where its tip touches a surface.
+read it, and put the marker down. The marker leaves ink only where its nib presses on the container with a normal
+force of at least 0.5 N (PhysX contact force).
 
 Run it:  inspect-robots run --embodiment yam_arena -E task=task.py -E object_jitter=0 --scorer task_score ...
 """
@@ -26,7 +28,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import jointkit  # noqa: E402
 import numpy as np  # noqa: E402
 from jointkit import on_physics, on_reset, on_step, part  # noqa: E402
-from yam_arena.task_file import TABLE_TOP  # noqa: E402
+from yam_arena.task_file import TABLE_TOP, Box  # noqa: E402
 
 SCENE = "station"
 SCORE_OVER = "end"
@@ -62,13 +64,13 @@ NF = 40                                                       # the side as 40 f
 DPHI = 2 * math.pi / NF
 WALL = 0.003                                                  # collision wall thickness (the real wall is thin)
 LID_H, LID_D = 0.008, 0.120                                   # recessed lid on the rim (our estimate)
-MASS = 0.5                                                    # container, lid and food (our assumption)
+MASS = 0.5                                                    # container, lid and water: weighed to 500 g
 TAPE_W = 0.048                                                # Scotch 2050, 48 mm
 TAPE_Z0, TAPE_Z1 = 0.051, 0.099                               # tape band, above the table
 TAPE_T = 0.0001                                               # tape stands this proud of the wall (about 0.1 mm)
 PHI0 = 1.25 * math.pi                                         # the label faces the right arm (front right)
 TAPE_FACETS = 13                                              # 13 facets: about 10.5 cm of tape around the side
-FOOD, HEADSPACE, LIDC, TAPEC = (0.62, 0.17, 0.11), (0.80, 0.84, 0.87), (0.88, 0.90, 0.91), (0.93, 0.87, 0.70)
+FOOD, HEADSPACE, LIDC, TAPEC = (0.70, 0.79, 0.85), (0.80, 0.84, 0.87), (0.88, 0.90, 0.91), (0.93, 0.87, 0.70)
 BANDS = (0.0, TAPE_Z0, TAPE_Z1, HEIGHT)
 
 
@@ -126,14 +128,28 @@ M_BOXES = (prism_x(M_R, TIP_X - M_LEN, TIP_X - M_LEN + 0.012, (0.05, 0.05, 0.05)
            + prism_x(0.0008, TIP_X - 0.004, TIP_X, (0.08, 0.08, 0.08), sides=8))      # fine bullet nib, 1.6 mm
 M0 = np.array([0.20, -0.17, TOP + M_R + 0.0005])
 MARKER = part("marker", pos=tuple(float(v) for v in M0), mass=0.011, color=(0.62, 0.63, 0.65), friction=0.6,
-              boxes=M_BOXES)
+              boxes=M_BOXES, contact_report=True)   # PhysX reports its contacts with the container
 
-OBJECTS = [CONTAINER, MARKER]
+# a sheet of copy paper under the marker (US letter folded in half, 216 x 140 mm, 0.1 mm), fixed: keeps ink off the
+# table where the marker is laid down
+PAPER = Box("paper", pos=(float(M0[0]), float(M0[1]), TOP + 0.00005), size=(0.216, 0.140, 0.0001),
+            color=(0.95, 0.95, 0.93))
+
+OBJECTS = [CONTAINER, MARKER, PAPER]
 
 # -- ink (pure Python; the physics hook feeds it) -------------------------------------------------------------------
-# A dot of ink is laid wherever the marker's tip is within CONTACT of the container's surface. Dots are kept in the
+# Ink needs the nib pressed on the container: PhysX's contact points between the marker and the container (a rigid
+# contact view) that lie on the nib (within NIB of the tip) must carry, together, a normal force of at least F_MIN.
+# The dot goes where that contact is (force-weighted mean of the nib's contact points). Dots are kept in the
 # container's frame (they move with it) and drawn as thin dark 1 mm patches on the surface (visual only, no collision).
-CONTACT = 0.0005        # m: the tip touches (our threshold)
+# F_MIN: Schomaker & Plamondon (1990), Biol. Cybern. 63:277-289, Table 2: mean axial pen force in cursive handwriting
+# 109.7 g (1.08 N), variance 806 g^2 (SD 28 g), so mean - 2 SD = 53 g (0.52 N); the means of all six writing and
+# drawing conditions are 84 to 115 g (0.82 to 1.13 N). Below 0.5 N no ink is laid. There is no upper limit: a harder
+# press still inks (the study gives no force above which a pen stops writing); F_HIGH (mean + 2 SD) is only reported.
+F_MIN = 0.5             # N: least normal force at the nib that lays ink
+F_HIGH = 1.64           # N: upper end of normal handwriting force (reported only, not a limit)
+NIB = 0.003             # m: contact points this close to the tip are on the nib
+MAX_CONTACTS = 4096     # contact points PhysX may report for the marker per step (its ~50 boxes make many)
 SPACING = 0.0005        # m: one dot per 0.5 mm of line
 LINE_W = 0.0010         # m: Sharpie Fine Point line, about 1 mm
 MAX_DOTS = 4000         # drawn dots (scoring keeps all)
@@ -194,10 +210,14 @@ class Ink:
         self.label.append(on_label(phi, float(q[2])))
         self.version += 1
 
-    def tip(self, p):
-        """The tip at container-frame point p this physics sample: lays ink if it touches."""
+    def tip(self, p, force: float):
+        """The nib's contact with the container this sample: ``p`` the contact point (container frame), ``force`` the
+        normal force on the nib (N, from PhysX). Lays ink if the force is at least F_MIN."""
+        if p is None or force < F_MIN:
+            self.prev = None
+            return False
         d, k = surface_distance(p)
-        if d > CONTACT or d < -0.004:
+        if d > 0.002 or d < -0.004:     # not on the side wall (the lid, the bottom)
             self.prev = None
             return False
         if self.prev is not None and 0 < np.linalg.norm(p - self.prev) < 0.006:
@@ -213,29 +233,70 @@ class Ink:
 
 if "ink" not in _SHARED:
     _SHARED.update(ink=Ink(), tick=0, contact=False, tcp={}, c0=None, tipped=False, moved=False, cache=None,
-                   vis=None, vis_version=-1, vis_pose=None, last_refresh=0, steps=0)
+                   vis=None, vis_version=-1, vis_pose=None, last_refresh=0, steps=0, cview=None, fsum=0.0, psum=None,
+                   force=0.0, inked_forces=[])
 INK: Ink = _SHARED["ink"]
 
 
 def _reset_state(environment=None) -> None:
     INK.reset()
     _SHARED.update(tick=0, contact=False, tcp={}, c0=None, tipped=False, moved=False, cache=None, vis_version=-1,
-                   vis_pose=None, last_refresh=0, steps=0)
+                   vis_pose=None, last_refresh=0, steps=0, fsum=0.0, psum=None, force=0.0, inked_forces=[])
 
 
 def _tip_world(marker) -> np.ndarray:
     return marker.to_world((TIP_X, 0.0, 0.0))
 
 
+def _host(x) -> np.ndarray:
+    return x.detach().cpu().numpy() if hasattr(x, "detach") else np.asarray(x.numpy() if hasattr(x, "numpy") else x)
+
+
+def nib_contact(forces, points, tip) -> tuple[float, np.ndarray | None]:
+    """(total normal force on the nib (N), force-weighted mean of its contact points) from PhysX contact points
+    (``forces`` (n,), ``points`` (n, 3), same frame as ``tip``)."""
+    forces, points = np.abs(np.asarray(forces, float).reshape(-1)), np.asarray(points, float).reshape(-1, 3)
+    on = np.linalg.norm(points - tip, axis=1) <= NIB
+    f = float(forces[on].sum())
+    return f, (forces[on] @ points[on] / f if f > 0 else None)
+
+
+def _nib_force(environment, marker) -> tuple[float, np.ndarray | None]:
+    """The nib's normal contact force against the container in the last physics step, read from a PhysX rigid
+    contact view (marker vs container), and where it acts (env frame)."""
+    from yam_arena.constants import PHYSICS_DT
+
+    if _SHARED["cview"] is None:
+        _SHARED["cview"] = jointkit.contact_view(environment, "marker", ["container"], max_contacts=MAX_CONTACTS)
+    f, p, _, _, count, start = _SHARED["cview"].get_contact_data(PHYSICS_DT)
+    n, i0 = int(_host(count).reshape(-1)[0]), int(_host(start).reshape(-1)[0])
+    if n == 0:
+        return 0.0, None
+    origin = jointkit._np(environment.unwrapped.scene.env_origins)[0]
+    pts = _host(p).reshape(-1, 3)[i0:i0 + n] - origin
+    return nib_contact(_host(f).reshape(-1)[i0:i0 + n], pts, _tip_world(marker))
+
+
 def _physics(environment) -> None:
-    """Every 4th physics step (60 Hz): the marker's tip against the container."""
+    """Every physics step: the nib's contact force; every 4th (60 Hz): ink, with the mean force of the last 4 steps
+    and the last step's contact point."""
     from yam_arena.scene import object_states
 
     _SHARED["tick"] += 1
+    s = object_states(environment, ["container", "marker"])
+    f, p = _nib_force(environment, s["marker"])
+    _SHARED["fsum"] += f
+    if p is not None:
+        _SHARED["psum"] = p
     if _SHARED["tick"] % 4:
         return
-    s = object_states(environment, ["container", "marker"])
-    _SHARED["contact"] = INK.tip(s["container"].to_local(_tip_world(s["marker"])))
+    force, p = _SHARED["fsum"] / 4, _SHARED["psum"]
+    _SHARED["fsum"], _SHARED["psum"], _SHARED["force"] = 0.0, None, force
+    _SHARED["contact"] = INK.tip(None if p is None else s["container"].to_local(p), force)
+    if _SHARED["contact"]:
+        _SHARED["inked_forces"].append(force)
+    elif 0.0 < force < F_MIN:
+        _SHARED["light"] = _SHARED.get("light", 0) + 1
 
 
 def _dot_quats(container_r: np.ndarray, facets: np.ndarray) -> np.ndarray:
@@ -305,7 +366,10 @@ def _step(environment) -> None:
         s = object_states(environment, ["container", "marker"])
         p = s["container"].to_local(_tip_world(s["marker"]))
         d, _ = surface_distance(p)
+        fi = np.array(_SHARED["inked_forces"]) if _SHARED["inked_forces"] else np.zeros(1)
         print(f"[label] t {_SHARED['steps'] / 20:6.2f} tip {np.round(p * 1000, 1)} d {d * 1000:6.2f} mm "
+              f"F {_SHARED['force']:5.2f} N inked F p5/50/95 {np.percentile(fi, [5, 50, 95]).round(2)} max "
+              f"{fi.max():.2f} n {len(fi)} light {_SHARED.get('light', 0)} "
               f"dots {len(INK.local)} on label {sum(INK.label)} container {np.round(s['container'].pos * 1000, 1)} "
               f"tcp R {np.round(_SHARED['tcp'].get('right', np.zeros(3)) * 1000, 1)}", flush=True)
 
@@ -316,7 +380,10 @@ if not _SHARED.get("hooks"):
     on_reset(_reset_state)
     _SHARED["hooks"] = True
 
-# -- the characters: stroke skeletons in a cell of height 1 (x right, y up), written in this order ------------------
+# -- the characters (cell of height 1, x right, y up) ---------------------------------------------------------------
+# Each character has one or more accepted forms. A form is a list of strokes that must all be drawn (the character's
+# strokes, counted for partial credit: STROKES) and a list of optional extra strokes that may be there or not (a flag
+# or a base on a "1", a bar across a "7"): they are never counted, they only keep that ink from counting as stray.
 GAP = 0.12                     # space between characters, in character heights
 
 
@@ -325,26 +392,52 @@ def _arc(cx, cy, rx, ry, a0, a1, n=16):
             for a in np.linspace(a0, a1, n)]
 
 
-def _glyphs():
+def _forms():
     w = 0.55
-    g = {
-        "0": (w, [_arc(w / 2, 0.5, w / 2, 0.5, 90, 450, 33)]),
-        "1": (0.30, [[(0.15, 1.0), (0.15, 0.0)]]),
-        "2": (w, [_arc(w / 2, 0.72, w / 2, 0.28, 160, -35) + [(0.0, 0.0), (w, 0.0)]]),
-        "3": (w, [_arc(w / 2, 0.75, w / 2, 0.25, 150, -90) + _arc(w / 2, 0.25, w / 2, 0.25, 90, -150)]),
-        "4": (w, [[(0.75 * w, 1.0), (0.0, 0.32), (w, 0.32)], [(0.75 * w, 1.0), (0.75 * w, 0.0)]]),
-        "5": (w, [[(w, 1.0), (0.08 * w, 1.0), (0.04 * w, 0.56)] + _arc(w / 2, 0.30, w / 2, 0.30, 120, -150)]),
-        "6": (w, [[(0.85 * w, 1.0), (0.2 * w, 0.62)] + _arc(w / 2, 0.30, w / 2, 0.30, 180, 540, 25)]),
-        "7": (w, [[(0.0, 1.0), (w, 1.0), (0.3 * w, 0.0)]]),
-        "8": (w, [_arc(w / 2, 0.75, 0.42 * w, 0.25, -90, 270, 25) + _arc(w / 2, 0.27, w / 2, 0.27, 90, -270, 25)]),
-        "9": (w, [_arc(w / 2, 0.72, w / 2, 0.28, 0, 360, 25) + [(w, 0.4), (0.6 * w, 0.0)]]),
-        "/": (0.30, [[(0.30, 1.0), (0.0, 0.0)]]),
-        "-": (0.35, [[(0.0, 0.5), (0.35, 0.5)]]),
+    one, slash = 0.30, 0.30
+    stem1 = [(0.15, 1.0), (0.15, 0.0)]
+    flag1, base1 = [(0.15, 1.0), (0.0, 0.80)], [(0.0, 0.0), (0.30, 0.0)]
+    four_bar, four_stem = [(0.0, 0.32), (w, 0.32)], [(0.75 * w, 1.0), (0.75 * w, 0.0)]
+    seven_top, seven_diag = [(0.0, 1.0), (w, 1.0)], [(w, 1.0), (0.3 * w, 0.0)]
+    f = {   # char: (width, [(strokes, optional strokes), ...]); the first form is the one the demo writes
+        "0": (w, [([_arc(w / 2, 0.5, w / 2, 0.5, 90, 450, 33)], [])]),
+        "1": (one, [([stem1], []), ([stem1], [flag1]), ([stem1], [base1]), ([stem1], [flag1, base1])]),
+        "2": (w, [([_arc(w / 2, 0.72, w / 2, 0.28, 160, -35) + [(0.0, 0.0)], [(0.0, 0.0), (w, 0.0)]], [])]),
+        "3": (w, [([_arc(w / 2, 0.75, w / 2, 0.25, 150, -90), _arc(w / 2, 0.25, w / 2, 0.25, 90, -150)], [])]),
+        "4": (w, [([[(0.75 * w, 1.0), (0.0, 0.32)], four_bar, four_stem], []),           # closed top
+                  ([[(0.1 * w, 1.0), (0.0, 0.32)], four_bar, four_stem], [])]),          # open top
+        "5": (w, [([[(w, 1.0), (0.08 * w, 1.0)], [(0.08 * w, 1.0), (0.04 * w, 0.56)],
+                    [(0.04 * w, 0.56)] + _arc(w / 2, 0.30, w / 2, 0.30, 120, -150)], [])]),
+        "6": (w, [([[(0.85 * w, 1.0), (0.2 * w, 0.62), (0.0, 0.30)], _arc(w / 2, 0.30, w / 2, 0.30, 180, 540, 25)], [])]),
+        "7": (w, [([seven_top, seven_diag], []),
+                  ([seven_top, seven_diag], [[(0.3 * w, 0.5), (0.95 * w, 0.5)]])]),        # crossed
+        "8": (w, [([_arc(w / 2, 0.75, 0.42 * w, 0.25, -90, 270, 25), _arc(w / 2, 0.27, w / 2, 0.27, 90, -270, 25)],
+                   [])]),
+        "9": (w, [([_arc(w / 2, 0.72, w / 2, 0.28, 0, 360, 25), [(w, 0.72), (w, 0.4), (0.6 * w, 0.0)]], [])]),
+        "/": (slash, [([[(0.30, 1.0), (0.0, 0.0)]], [])]),
+        "-": (0.35, [([[(0.0, 0.5), (0.35, 0.5)]], [])]),
     }
-    return {c: (wd, [np.array(s, float) for s in strokes]) for c, (wd, strokes) in g.items()}
+    return {c: (wd, [([np.array(s, float) for s in core], [np.array(s, float) for s in opt]) for core, opt in forms])
+            for c, (wd, forms) in f.items()}
 
 
-GLYPHS = _glyphs()
+FORMS = _forms()
+STROKES = {c: len(forms[0][0]) for c, (_, forms) in FORMS.items()}   # strokes per character (partial credit)
+
+
+def _pen_paths(strokes):
+    """The default form's strokes as pen paths: a stroke that starts where (within 0.05 of the height) the previous
+    one ended is drawn without lifting the pen."""
+    out = []
+    for s in strokes:
+        if out and np.linalg.norm(out[-1][-1] - s[0]) < 0.05:
+            out[-1] = np.concatenate([out[-1], s])
+        else:
+            out.append(s)
+    return out
+
+
+GLYPHS = {c: (wd, _pen_paths(forms[0][0])) for c, (wd, forms) in FORMS.items()}   # what the demo writes
 H_NOM = 30.0                   # mm: the demo writes 30 mm tall characters
 Z_MID = 1000 * (TAPE_Z0 + TAPE_Z1) / 2
 
@@ -372,24 +465,30 @@ def resample(poly: np.ndarray, step: float) -> np.ndarray:
     return np.column_stack([np.interp(u, t, poly[:, 0]), np.interp(u, t, poly[:, 1])])
 
 
-def char_points(ch: str, h: float, step: float = 0.5) -> np.ndarray:
-    """Template points (mm) of one character ``h`` mm tall, its cell's bottom-left at (0, 0)."""
-    return np.concatenate([resample(s * h, step) for s in GLYPHS[ch][1]])
+def char_points(ch: str, h: float, step: float = 0.5, form: int = 0, extras=None) -> np.ndarray:
+    """Points (mm) along one character ``h`` mm tall written in ``form`` (its strokes, plus the optional strokes
+    listed in ``extras``, default all of the form's), its cell's bottom-left at (0, 0)."""
+    core, opt = FORMS[ch][1][form]
+    opt = opt if extras is None else [opt[i] for i in extras]
+    return np.concatenate([resample(s * h, step) for s in list(core) + list(opt)])
 
 
 # -- scoring --------------------------------------------------------------------------------------------------------
-COVER = 2.5                    # mm: a template point is covered if ink lies within this distance
-NEAR = 3.0                     # mm: ink farther than this from the template is stray
-FULL_COVER = 0.90              # coverage for full credit for a character (linear from 0.40)
-ZERO_COVER = 0.40
-STRAY_CHAR = 0.25              # more stray ink than this in a character's cell: that character scores 0
+COVER = 2.5                    # mm: a point of a stroke is drawn if ink lies within this distance of it
+STROKE_DRAWN = 0.80            # a stroke counts as drawn when this share of its length is drawn
+NEAR = 3.0                     # mm: ink farther than this from the character's strokes is stray
+STRAY_CHAR = 0.25              # more stray ink than this in a character's share: scribbled over, that character 0
 STRAY_ALL = 0.20               # more stray ink than this on the whole label: the text scores 0
+OTHER_MARGIN = 0.05            # another character reads better when it explains this much more of the ink,
+OTHER_COVER = 0.10             # or as much of it while this much more of its strokes' length is drawn
 OFF_LABEL_MAX = 20.0           # mm of line off the label (on the container): score 0
 HEIGHTS = (24.0, 27.0, 30.0, 33.0, 36.0)
 SHIFT = 4                      # mm: each character may sit this far from its place in the fitted line
 MOVED, TIPPED = 0.03, math.radians(20)
 GRID = 0.5
 S_RANGE, Z_RANGE = (-70.0, 70.0), (1000 * TAPE_Z0 - 6, 1000 * TAPE_Z1 + 6)
+_SHIFTS = np.stack(np.meshgrid(np.arange(-SHIFT, SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"),
+                   -1).reshape(-1, 2)
 
 
 def _distance_grid(sz: np.ndarray) -> np.ndarray:
@@ -422,75 +521,147 @@ def inked(pts: np.ndarray) -> np.ndarray:
     return np.unique(np.round(pts / GRID), axis=0) * GRID if len(pts) else pts
 
 
-def read_char(ink: np.ndarray, dist: np.ndarray, s: float, z0: float, h: float) -> str | None:
-    """The character the ink in one cell reads as: the glyph (of all of GLYPHS, each tried within +-SHIFT mm of the
-    cell's place) whose strokes the ink covers best while staying close to them (min of the two fractions)."""
+def _best_place(dist, pts, base, shifts=_SHIFTS):
+    """The shift of template points ``pts`` (placed at ``base``) that covers the most of them with ink, ties broken
+    by the smallest mean distance to the ink; returns (coverage, shift)."""
+    d = _lookup(dist, pts[None] + base + shifts[:, None])
+    cov = (d <= COVER).mean(1) - 1e-4 * np.minimum(d, 10.0).mean(1)
+    i = int(np.argmax(cov))
+    return float((d[i] <= COVER).mean()), shifts[i]
+
+
+def _form_fit(dist, ch, form, h, base):
+    """(strokes drawn, share of the strokes drawn, all the form's points (mm, placed), share of its strokes' length
+    drawn) for one form at its best shift around ``base``."""
+    core, opt = FORMS[ch][1][form]
+    strokes = [resample(s * h, 1.0) for s in core]
+    cov, sh = _best_place(dist, np.concatenate(strokes), base)
+    drawn = sum(float((_lookup(dist, s + base + sh) <= COVER).mean()) >= STROKE_DRAWN for s in strokes)
+    pts = np.concatenate(strokes + [resample(s * h, 1.0) for s in opt]) + base + sh
+    if opt:   # the optional strokes may sit a little differently (a longer flag, a lower bar)
+        _, sh2 = _best_place(dist, np.concatenate([resample(s * h, 1.0) for s in opt]), base + sh,
+                             _SHIFTS[np.abs(_SHIFTS).max(1) <= 2])
+        pts = np.concatenate([np.concatenate(strokes) + base + sh] + [resample(s * h, 1.0) + base + sh + sh2
+                                                                      for s in opt])
+    return drawn, drawn / len(core), pts, cov
+
+
+def _explained(ink: np.ndarray, pts: np.ndarray) -> float:
     from scipy.spatial import cKDTree
 
-    if len(ink) < 5:
-        return None
-    shifts = np.stack(np.meshgrid(np.arange(-SHIFT, SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"),
-                      -1).reshape(-1, 2)
-    best, out = -1.0, None
-    for ch in GLYPHS:
-        pts = char_points(ch, h, 1.0) + [s, z0]
-        cov = (_lookup(dist, pts[None] + shifts[:, None]) <= COVER).mean(1)
-        i = int(np.argmax(cov))
-        near = float((cKDTree(pts + shifts[i]).query(ink)[0] <= NEAR).mean())
-        m = min(float(cov[i]), near)
-        if m > best + 1e-9:
-            best, out = m, ch
-    return out
+    return float((cKDTree(pts).query(ink)[0] <= NEAR).mean()) if len(ink) else 0.0
+
+
+OTHER_SHIFT = 6                # mm: another character is looked for this far around a character's centre
+_OTHER_SHIFTS = np.stack(np.meshgrid(np.arange(-OTHER_SHIFT, OTHER_SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0),
+                                     indexing="ij"), -1).reshape(-1, 2)
+
+
+def read_as_other(sz, dist, h, centre, n, line_pts, target, complete=True, cover=1.0):
+    """Does the ink around character ``n`` (centre (s, z) mm) read better as another character? For every other
+    character and form whose strokes are all drawn there (within OTHER_SHIFT mm) by character n's share of the ink
+    (``dist``: its distance grid), compare how much of the ink in its
+    area the intended line explains (``line_pts``: each character's points) with how much the line explains with
+    character n swapped for it. Returns (char, explained by the swap, explained by the line) of the best swap that
+    explains OTHER_MARGIN more, or at least as much (-0.02) when character n is not ``complete`` (an unfinished
+    character that makes another, finished one reads as that one) or when OTHER_COVER more of the other character's
+    strokes' length is drawn than of character n's (``cover``), else None."""
+    from scipy.spatial import cKDTree
+
+    rest = np.concatenate([p for i, p in enumerate(line_pts) if i != n] or [np.zeros((0, 2))])
+    line = cKDTree(np.concatenate(line_pts))
+    rest_tree = cKDTree(rest) if len(rest) else None
+    best = None
+    for ch, (wd, forms) in FORMS.items():
+        if ch == target:
+            continue
+        base = centre - [wd * h / 2, h / 2]
+        for core, opt in forms:
+            strokes = [resample(s * h, 1.0) for s in core]
+            cov, sh = _best_place(dist, np.concatenate(strokes), base, _OTHER_SHIFTS)
+            if not all(float((_lookup(dist, s + base + sh) <= COVER).mean()) >= STROKE_DRAWN for s in strokes):
+                continue
+            pts = np.concatenate(strokes + [resample(s * h, 1.0) for s in opt]) + base + sh
+            lo, hi = pts.min(0) - NEAR, pts.max(0) + NEAR
+            ink = sz[np.all((sz >= lo) & (sz <= hi), axis=1)]
+            if len(ink) < 5:
+                continue
+            e_line = float((line.query(ink)[0] <= NEAR).mean())
+            d_swap = cKDTree(pts).query(ink)[0]
+            if rest_tree is not None:
+                d_swap = np.minimum(d_swap, rest_tree.query(ink)[0])
+            e_swap = float((d_swap <= NEAR).mean())
+            margin = OTHER_MARGIN if complete and cov < cover + OTHER_COVER else -0.02
+            if e_swap > e_line + margin and (best is None or e_swap - e_line > best[1] - best[2]):
+                best = (ch, e_swap, e_line)
+    return best
 
 
 def read_label(sz: np.ndarray, text: str = TEXT) -> dict:
-    """Score the ink on the label (``sz``: (N, 2) label coordinates in mm) as ``text``: fit the text's line (height,
-    place), then each character (+-SHIFT mm), and give each character credit for how much of its strokes the ink
-    covers, unless there is too much stray ink."""
+    """Score the ink on the label (``sz``: (N, 2) label coordinates in mm) as ``text``.
+
+    1. Fit the text's line (height 24 to 36 mm, place on the tape) to the ink.
+    2. Each character: place each of its accepted forms within +-SHIFT mm of its place in the line; count its
+       strokes drawn (STROKE_DRAWN of the length within COVER mm of ink); keep the form with the most strokes drawn
+       (then the one explaining the most of the character's ink).
+    3. Share out the ink: each inked cell goes to the nearest character; farther than NEAR mm from every character's
+       strokes it is stray.
+    4. A character's credit = strokes drawn / its strokes (STROKES), but 0 if more than STRAY_CHAR of its share of
+       the ink is farther than NEAR from its strokes (scribbled over, extra marks), or if the ink reads as another
+       character (``read_as_other``).
+    5. The text = mean character credit, 0 if more than STRAY_ALL of all the ink is stray."""
     from scipy.spatial import cKDTree
 
-    res = {"chars": [0.0] * len(text), "cover": [0.0] * len(text), "stray": 1.0, "h": None, "text": 0.0}
+    n_ch = len(text)
+    res = {"chars": [0.0] * n_ch, "strokes": [0] * n_ch, "form": [0] * n_ch, "reads": [None] * n_ch,
+           "stray": 1.0, "h": None, "text": 0.0}
     sz = inked(sz)
     if len(sz) < 10:
         return res
     dist = _distance_grid(sz)
     best = (-1.0, None)
     for h in HEIGHTS:
-        lay = layout(text, h)
-        pts = np.concatenate([char_points(c, h, 1.0) + [s, 0.0] for c, s, _ in lay])
+        pts = np.concatenate([char_points(c, h, 1.0) + [s, 0.0] for c, s, _ in layout(text, h)])
         width = text_width(text, h)
         s0 = np.arange(S_RANGE[0], S_RANGE[1] - width + 1e-9, 1.0)
         z0 = np.arange(Z_RANGE[0], Z_RANGE[1] - h + 1e-9, 1.0)
         if not len(s0) or not len(z0):
             continue
         off = np.stack(np.meshgrid(s0, z0, indexing="ij"), -1).reshape(-1, 2)
-        cov = (_lookup(dist, pts[None] + off[:, None]) <= COVER).mean(1)
-        i = int(np.argmax(cov))
-        if cov[i] > best[0]:
-            best = (float(cov[i]), (h, off[i]))
+        cov, sh = _best_place(dist, pts, np.zeros(2), off)
+        if cov > best[0] + 1e-9:
+            best = (cov, (h, sh))
     if best[1] is None:
         return res
     h, (s0, z0) = best[1]
     res["h"] = h
-    templ, cells = [], []
-    shifts = np.stack(np.meshgrid(np.arange(-SHIFT, SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"),
-                      -1).reshape(-1, 2)
+    fits = []
     for n, (ch, s, wd) in enumerate(layout(text, h)):
-        pts = char_points(ch, h) + [s0 + s, z0]
-        cov = (_lookup(dist, pts[None] + shifts[:, None]) <= COVER).mean(1)
-        i = int(np.argmax(cov))
-        pts = pts + shifts[i]
-        templ.append(pts)
-        cells.append((s0 + s + shifts[i][0] - GAP * h / 2, s0 + s + shifts[i][0] + wd + GAP * h / 2))
-        res["cover"][n] = float(cov[i])
-    far = cKDTree(np.concatenate(templ)).query(sz)[0] > NEAR
-    res["stray"] = float(far.mean())
-    for n, (lo, hi) in enumerate(cells):
-        inside = (sz[:, 0] >= lo) & (sz[:, 0] < hi)
-        stray = float(far[inside].mean()) if inside.any() else 0.0
-        c = (res["cover"][n] - ZERO_COVER) / (FULL_COVER - ZERO_COVER)
-        ok = stray <= STRAY_CHAR and read_char(sz[inside], dist, lo + GAP * h / 2, z0, h) == text[n]
-        res["chars"][n] = float(np.clip(c, 0.0, 1.0)) if ok else 0.0
+        base = np.array([s0 + s, z0])
+        fits.append([(_form_fit(dist, ch, f, h, base), f) for f in range(len(FORMS[ch][1]))])
+    # share out the ink: nearest character (over all its forms' points); stray if farther than NEAR from all
+    owner_pts = [np.concatenate([c[0][2] for c in cand]) for cand in fits]
+    dmin = np.stack([cKDTree(p).query(sz)[0] for p in owner_pts])
+    owner = np.argmin(dmin, 0)
+    res["stray"] = float((dmin.min(0) > NEAR).mean())
+    chosen = []
+    for n, (ch, s, wd) in enumerate(layout(text, h)):
+        mine = sz[owner == n]                      # this character's share of the ink
+        # the strokes again, drawn by this character's own share of the ink only (not by its neighbours')
+        local, base = _distance_grid(mine), np.array([s0 + s, z0])
+        cand = [(_form_fit(local, ch, f, h, base), f) for f in range(len(FORMS[ch][1]))]
+        (drawn, share, pts, cov), f = max(cand, key=lambda c: (c[0][0], _explained(mine, c[0][2])))
+        chosen.append((drawn, share, pts, cov, f, mine))
+    line_pts = [c[2] for c in chosen]
+    for n, (drawn, share, pts, cov, f, mine) in enumerate(chosen):
+        res["strokes"][n], res["form"][n] = int(drawn), f
+        if len(mine) == 0 or _explained(mine, pts) < 1.0 - STRAY_CHAR:
+            continue
+        other = read_as_other(sz, _distance_grid(mine), h, np.array([np.median(pts[:, 0]), z0 + h / 2]), n, line_pts, text[n],
+                              share >= 1.0, cov)
+        res["reads"][n] = other[0] if other else text[n]
+        if other is None:
+            res["chars"][n] = float(share)
     res["text"] = 0.0 if res["stray"] > STRAY_ALL else float(np.mean(res["chars"]))
     return res
 
@@ -538,18 +709,20 @@ def success(objects) -> bool:
 
 def score(objects) -> float:
     """0 if the container was tipped over (20 degrees) or pushed more than 3 cm off its spot, or if more than 20 mm of
-    line went off the label. Otherwise 0.8 x the mean character credit (each 0 to 1 by how much of its strokes the ink
-    covers; 0 with too much stray ink), plus 0.2 when every character is fully legible and the marker lies on the
-    table, let go."""
+    line went off the label. Otherwise 0.8 x the mean character credit (each: strokes drawn / its strokes, a stroke
+    drawn when 80 % of its length is; 0 if scribbled over or if it reads as another character), plus 0.2 when every
+    character is fully drawn and legible and the marker lies on the table, let go."""
     return _update(objects)
 
 
 # -- scripted demo (pure NumPy plans; demo() wraps them in yam_arena Waypoints) -------------------------------------
 OPEN, CLOSED = -0.04695, 0.0
 GRIP_DZ = 0.0105              # the marker's axis this far under the TCP when picked up from the table
+GRIP_BACK = float(os.environ.get("DEMO_GRIP", "0.060"))   # the demo grips the barrel this far behind the tip
 PRESS = float(os.environ.get("DEMO_PRESS", "0.003"))   # the tip is commanded this far into the surface
 SAG = float(os.environ.get("DEMO_SAG", "0.0"))         # added to the commanded TCP height while writing
-STEP_MM, STEP_S = 2.5, 0.2    # writing: a waypoint every 2.5 mm, 0.2 s each (12.5 mm/s)
+STEP_MM = 2.5                 # writing: a waypoint every 2.5 mm,
+STEP_S = float(os.environ.get("DEMO_STEP_S", "0.4"))   # this long each (0.4 s: 6.25 mm/s)
 LIFT = 0.015                  # pen up: 15 mm off the surface
 
 
@@ -568,7 +741,7 @@ def pen_pose(s_mm: float, z_mm: float, out: float):
     container's axis."""
     p, phi = surface_point(s_mm, z_mm, out)
     d = -np.array([math.cos(phi), math.sin(phi), 0.0])
-    return p - TIP_X * d + [0.0, 0.0, GRIP_DZ + SAG], phi - math.pi
+    return p - GRIP_BACK * d + [0.0, 0.0, GRIP_DZ + SAG], phi - math.pi
 
 
 def _write(text: str, h: float = H_NOM):
@@ -589,7 +762,7 @@ def _write(text: str, h: float = H_NOM):
 
 
 def _right():
-    g = np.array([M0[0], M0[1], TOP + M_R + GRIP_DZ])
+    g = np.array([M0[0] + TIP_X - GRIP_BACK, M0[1], TOP + M_R + GRIP_DZ])   # on the barrel, GRIP_BACK behind the tip
     plan = [(2.0, g + [0, 0, 0.07], 0.0, OPEN, "over the marker"), (1.5, g, 0.0, OPEN, "down"),
             (0.8, g, 0.0, CLOSED, "grip the marker"), (1.5, g + [0, 0, 0.09], 0.0, CLOSED, "lift")]
     first = _write(TEXT)
@@ -635,7 +808,8 @@ def plan() -> dict[str, list]:
 
 
 def demo():
-    """The left hand presses the lid down (holds the container); the right hand picks the marker up by the barrel,
+    """The left hand holds the container from behind; the right hand picks the marker up by the barrel (GRIP_BACK
+    behind the tip),
     writes the text stroke by stroke with the tip pressed onto the tape, turning the marker to keep it pointing at
     the container's axis, then lays the marker back where it was and lets go."""
     from yam_arena.demo import Waypoint

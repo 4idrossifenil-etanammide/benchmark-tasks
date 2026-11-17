@@ -18,15 +18,22 @@ from yam_arena.task_file import load  # noqa: E402
 RUN_LIMIT = 1600
 
 
-def written(text, h=30.0, ds=0.0, dz=0.0):
+def written(text, h=30.0, ds=0.0, dz=0.0, forms=None, drop=None):
+    """Ink of ``text`` written along the accepted strokes, centred on the label; ``forms`` {index: form} picks other
+    accepted forms, ``drop`` {index: [stroke numbers]} leaves strokes out."""
     s0, z0 = -task.text_width(text, h) / 2 + ds, task.Z_MID - h / 2 + dz
-    return np.concatenate([task.char_points(c, h) + [s0 + s, z0] for c, s, _ in task.layout(text, h)])
+    forms, drop, out = forms or {}, drop or {}, []
+    for i, (c, s, _) in enumerate(task.layout(text, h)):
+        core, opt = task.FORMS[c][1][forms.get(i, 0)]
+        out += [task.resample(st * h, 0.5) + [s0 + s, z0] for k, st in enumerate(list(core) + list(opt))
+                if k not in drop.get(i, ())]
+    return np.concatenate(out)
 
 
 def test_loads():
     t = load(HERE / "task.py")
     assert t.success and t.score and t.demo
-    assert {"container", "marker"} <= set(t.free_objects)
+    assert {"container", "marker"} <= set(t.free_objects) and "paper" not in t.free_objects
 
 
 def test_text_is_ascii():
@@ -76,16 +83,79 @@ def test_partial_credit():
     assert 0.0 < r["text"] < 1.0
 
 
-def test_ink_only_on_contact():
+def test_stroke_counts():
+    assert task.STROKES == {"0": 1, "1": 1, "2": 2, "3": 2, "4": 3, "5": 3, "6": 2, "7": 2, "8": 2, "9": 2, "/": 1,
+                            "-": 1}
+
+
+def test_partial_credit_is_strokes_drawn_over_strokes():
+    r = task.read_label(written("11/22", drop={4: [1]}))            # last "2" without its base line: 1 of 2
+    assert r["chars"] == [1.0, 1.0, 1.0, 1.0, 0.5] and abs(r["text"] - 0.9) < 1e-9
+    r = task.read_label(written("04/14", drop={1: [2]}), "04/14")   # first "4" without its upright: 2 of 3
+    assert abs(r["chars"][1] - 2 / 3) < 1e-9 and abs(r["text"] - (4 + 2 / 3) / 5) < 1e-9
+    r = task.read_label(written("08/26", drop={1: [1]}), "08/26")   # "8" without its lower loop: 1 of 2
+    assert r["chars"][1] == 0.5
+    r = task.read_label(written("05/16", drop={1: [0]}), "05/16")   # "5" without its top bar: 2 of 3
+    assert abs(r["chars"][1] - 2 / 3) < 1e-9
+
+
+def test_other_dates_read_when_written_as_shown():
+    rng = np.random.default_rng(2)
+    for d in ("03/09", "12/05", "10/31", "04/17", "08/26", "06/28", "09/30", "01/14", "07/19", "05/16", "02/27",
+              "12/31"):
+        assert task.read_label(written(d), d)["text"] == 1.0, d
+        ink = written(d)
+        assert task.read_label(ink + rng.normal(0, 0.7, ink.shape), d)["text"] == 1.0, d
+        assert task.read_label(written(d, 26, 6, 3), d)["text"] == 1.0, d
+
+
+def test_common_letterforms_read():
+    for d, forms in (("11/22", {0: 1, 1: 1}),    # "1" with a flag
+                     ("11/22", {0: 2, 1: 2}),    # "1" with a base
+                     ("11/22", {0: 3, 1: 3}),    # "1" with a flag and a base
+                     ("04/14", {1: 1, 4: 1}),    # open-top "4"
+                     ("07/17", {1: 1, 4: 1}),    # crossed "7"
+                     ("11/17", {0: 3, 3: 1, 4: 1})):
+        r = task.read_label(written(d, forms=forms), d)
+        assert r["text"] == 1.0, (d, forms, r)
+
+
+def test_other_digits_and_dates_fail():
+    for target, ink in (("11/22", "11/23"), ("11/22", "17/22"), ("11/22", "11/28"), ("03/09", "08/09"),
+                        ("03/09", "03/08"), ("10/31", "10/37"), ("12/05", "12/06"), ("04/17", "09/17"),
+                        ("06/28", "05/28"), ("11/22", "11-22"), ("11/22", "71/22"), ("18/22", "15/22")):
+        r = task.read_label(written(ink), target)
+        assert r["text"] <= 0.8 + 1e-9 and min(r["chars"]) == 0.0, (target, ink, r)
+    for a in "0123456789":       # any other digit in place of one: that character gets nothing
+        for b in "0123456789":
+            if a != b:
+                assert task.read_label(written(f"1{b}/22"), f"1{a}/22")["text"] <= 0.8 + 1e-9, (a, b)
+    rng = np.random.default_rng(3)
+    scribble = np.column_stack([rng.uniform(-50, 50, 4000), rng.uniform(52, 98, 4000)])
+    assert task.read_label(scribble, "03/09")["text"] == 0.0
+
+
+def test_ink_needs_nib_contact_force():
     ink = task.Ink()
     p, _ = task.surface_point(0.0, task.Z_MID)
     local = p - [task.C_XY[0], task.C_XY[1], task.TOP]
-    n = np.array([np.cos(task.PHI0), np.sin(task.PHI0), 0.0])     # outward at the label's centre
     t = np.array([-np.sin(task.PHI0), np.cos(task.PHI0), 0.0])     # along the label
-    out = local + n * 0.002                                         # 2 mm off the surface: no ink
-    assert not ink.tip(out) and not ink.local
-    assert ink.tip(local) and len(ink.local) == 1 and ink.label[0]
-    assert ink.tip(local + t * 0.003) and len(ink.local) >= 6   # a 3 mm stroke: dots every 0.5 mm
+    assert task.F_MIN == 0.5
+    assert not ink.tip(None, 2.0) and not ink.local                 # no contact reported: no ink
+    assert not ink.tip(local, 0.0) and not ink.local                # touching without force: no ink
+    assert not ink.tip(local, 0.45) and not ink.local               # below 0.5 N: no ink
+    assert ink.tip(local, 0.6) and len(ink.local) == 1 and ink.label[0]
+    assert ink.tip(local + t * 0.003, 0.9) and len(ink.local) >= 6  # a 3 mm stroke: dots every 0.5 mm
+    assert ink.tip(local + t * 0.006, 5.0)                          # harder than handwriting: still inks
+    assert not ink.tip(local + [0, 0, 0.2], 1.0)                    # a contact off the side wall (lid): no ink
+
+
+def test_only_nib_contacts_count():
+    tip = np.array([0.1, 0.2, 0.3])
+    f, p = task.nib_contact([0.3, 0.4, 2.0], [tip + [0.001, 0, 0], tip - [0.001, 0, 0], tip + [0.02, 0, 0]], tip)
+    assert abs(f - 0.7) < 1e-9 and np.linalg.norm(p - tip) < 0.001  # the barrel's 2 N contact 20 mm away is left out
+    f, p = task.nib_contact([1.0], [tip + [0.0, 0.01, 0.0]], tip)
+    assert f == 0.0 and p is None
 
 
 def test_demo_reachable():

@@ -17,6 +17,8 @@ yam_arena task files only take single primitives (Box, Cylinder, Sphere, library
 - An ``Attach`` with ``travel > 0`` is a screw-type joint (a D6): free turning about z plus sliding along z within
   ``[0, travel]``, each with its own drive (``set_attach_target(..., height=)``).
 - ``Attach(enabled=False)`` spawns the joint switched off, for a part that is attached only later in the trial.
+- ``part(..., contact_report=True)`` applies PhysX's contact report API to the body, so that a PhysX rigid contact
+  view can read its contact forces and points against other bodies (``contact_view``).
 
 Importing it hooks ``yam_arena.scene`` (spawning and state), ``yam_arena.inspect_embodiment`` (step and reset) and
 ``yam_arena.demo`` (a ``Waypoint.yaw`` may be a 3x3 world rotation matrix, so ``yam_scripted`` can play grips other
@@ -93,6 +95,7 @@ class Part(Box):
     radius: float = 0.0  # > 0: one sphere collider instead of boxes
     contact_offset: float = 0.001  # m; PhysX makes contacts within the sum of both shapes' offsets
     ccd: bool = False  # speculative CCD, for a small part that can move fast against thin walls
+    contact_report: bool = False  # PhysX reports this body's contacts (forces, points), for a contact view
 
     def _check(self) -> None:
         super()._check()
@@ -101,12 +104,12 @@ class Part(Box):
 
 
 def part(name, pos, boxes, mass, yaw=0.0, hinge=None, color=(0.5, 0.5, 0.5), friction=0.9, attach=None,
-         contact_offset=0.001, ccd=False) -> Part:
+         contact_offset=0.001, ccd=False, contact_report=False) -> Part:
     lo = np.min([np.subtract(c, np.divide(s, 2)) for c, s, *_ in boxes], axis=0)
     hi = np.max([np.add(c, np.divide(s, 2)) for c, s, *_ in boxes], axis=0)
     return Part(name=name, pos=tuple(pos), size=tuple((hi - lo).tolist()), mass=mass, color=color, yaw=yaw,
                 boxes=tuple(boxes), hinge=hinge, attach=attach, friction=friction, lo=tuple(lo.tolist()),
-                hi=tuple(hi.tolist()), contact_offset=contact_offset, ccd=ccd)
+                hi=tuple(hi.tolist()), contact_offset=contact_offset, ccd=ccd, contact_report=contact_report)
 
 
 def ball(name, pos, radius, mass, color=(0.5, 0.5, 0.5), friction=0.3) -> Part:
@@ -204,6 +207,9 @@ def _spawn(prim_path: str, cfg, translation=None, orientation=None, **kwargs):
         rb.CreateSolverPositionIterationCountAttr(32)
         if spec.ccd:
             rb.CreateEnableSpeculativeCCDAttr(True)
+        if spec.contact_report:  # as Isaac Lab's activate_contact_sensors: report every contact (threshold 0)
+            rb.CreateSleepThresholdAttr(0.0)
+            PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr(0.0)
         shapes = list(enumerate(boxes)) + ([(-1, ((0, 0, 0), None, spec.color))] if radius > 0 else [])
         for i, (centre, size, color, *rot) in shapes:
             if size is None:
@@ -396,6 +402,26 @@ def _part_state(environment, spec: Part) -> PartState:
     angle = float(_np(asset.data.joint_pos)[0, _hinge_id(asset, spec.hinge)]) if spec.hinge else 0.0
     return PartState(pos=pos, quat_xyzw=pose[3:7], lin_vel=vel[:3], ang_vel=vel[3:6], low=corners.min(0),
                      high=corners.max(0), hinge=angle, R=r)
+
+
+def contact_view(environment, sensor: str, filters: list[str], max_contacts: int = 64):
+    """A PhysX rigid contact view of Part ``sensor``'s body (spawned with ``contact_report=True``) against the bodies
+    of Parts ``filters``, in env 0. ``view.get_contact_data(dt)`` then gives the normal force, point, normal and
+    separation of each contact point between them."""
+    from isaaclab.sim.utils.stage import get_current_stage
+    from isaaclab_physx.physics import PhysxManager
+
+    bodies = {}
+    for prim in get_current_stage().Traverse():
+        p = prim.GetPath().pathString
+        for name in [sensor, *filters]:
+            if p.endswith(f"/{name}/body") and name not in bodies:
+                bodies[name] = p
+    missing = {sensor, *filters} - set(bodies)
+    if missing:
+        raise RuntimeError(f"contact_view: no body prim for {sorted(missing)}")
+    return PhysxManager.get_physics_sim_view().create_rigid_contact_view(
+        bodies[sensor], filter_patterns=[bodies[f] for f in filters], max_contact_data_count=max_contacts)
 
 
 def set_hinge_target(environment, name: str, angle: float) -> None:

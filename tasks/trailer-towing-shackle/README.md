@@ -10,24 +10,27 @@ in until its collar sits on the upper ear and the pin is hand-tight.
 
 ## Why this task
 
-The screw-pin shackle is standard rigging and towing hardware: a sling, strap or chain is attached to a lug or eye by
-pinning a shackle through it and screwing the pin home. O*NET (release 30.0, Tools Used file, commodity 24101641
-"Shackle") lists shackles among the tools of these occupations, with US employment from BLS OEWS (May 2025):
+Rigging a load (attaching a sling, chain or cable to it so it can be lifted or pulled) is daily work for about
+900,000 US workers. O*NET (release 30.0) lists it among the tasks of these occupations, and its incumbent ratings give
+the share who do it daily or more often (Task Ratings file, frequency scale, "daily", "several times daily" and
+"hourly or more"); employment is O*NET's 2025 figure for each occupation:
 
-| Occupation (O*NET-SOC) | US workers |
-|---|---|
-| HVAC mechanics and installers (49-9021) | 409,670 |
-| Glaziers (47-2121) | 58,480 |
-| Roustabouts, oil and gas (47-5071) | 44,970 |
-| Crane and tower operators (53-7021) | 42,890 |
-| Boilermakers (47-2011) | 10,190 |
-| Wind turbine service technicians (49-9081) | 9,980 |
-| Helpers, roofers (47-3016) | 6,030 |
-| **Total** | **582,210** |
+| Occupation (O*NET-SOC) | O*NET task (ID) | Daily or more | US workers | Rigging daily |
+|---|---|---|---|---|
+| Laborers and freight, stock and material movers, hand (53-7062) | Attach slings, hooks, or other devices to lift cargo and guide loads. (10790) | 23.8% | 2,940,300 | 698,300 |
+| Helpers, production workers (51-9198) | Attach slings, ropes, or cables to objects such as pipes, hoses, or bundles. (12726) | 63.6% | 167,400 | 106,500 |
+| Structural iron and steel workers (47-2221) | Fasten structural steel members to hoist cables, using chains, cables, or rope. (11553) | 71.8% | 68,300 | 49,100 |
+| Sailors and marine oilers (53-5011) | Break out, rig, and stow cargo-handling gear, stationary rigging, or running gear. (14468) | 73.8% | 33,000 | 24,300 |
+| Riggers (49-9096) | Attach loads to rigging to provide support or prepare them for moving, using hand and power tools. (13894) | 87.4% | 22,500 | 19,700 |
+| **Total** | | | | **897,900** |
 
-The same operation couples tow straps and chains to towing lugs in vehicle recovery and farming.
-Sources: https://www.onetcenter.org/dl_files/database/db_30_0_text/Tools%20Used.txt and
-https://www.bls.gov/oes/ (national estimates by occupation).
+The screw-pin shackle is the standard link in that work: the sling, chain or cable is attached to a lug, padeye or
+eye by pinning a shackle through it and screwing the pin home, and the pin holds only if its collar is on the ear and
+it is hand-tight. O*NET's Tools Used file (commodity 24101641 "Shackle") also lists shackles by name for crane and
+tower operators, boilermakers, glaziers, roustabouts, HVAC installers, wind turbine technicians and roofers' helpers.
+The same operation couples tow straps and chains to towing lugs in vehicle recovery and farming, the setting used here.
+Sources: https://www.onetcenter.org/database.html (release 30.0: Task Statements, Task Ratings, Tools Used) and the
+employment figures on each occupation's O*NET OnLine page (https://www.onetonline.org/link/summary/<code>).
 
 **How the shackle is used for towing:** the
 shackle pinned through the drawbar's towing lug is the attachment point; the tow strap or chain from the towing

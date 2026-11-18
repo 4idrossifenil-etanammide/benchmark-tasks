@@ -6,8 +6,8 @@
 - a strip of beige masking tape (Scotch 2050, 48 mm wide, about 10.5 cm long) stuck around the container's side,
   facing the right arm, from 51 to 99 mm above the table: the label. It is blank;
 - a black Sharpie Fine Point permanent marker (cap already off, 123 mm long, 11 mm barrel, bullet tip) lying on a
-  sheet of copy paper (US letter folded in half, 216 x 140 mm) on the table to the right of the container, tip
-  pointing forward.
+  sheet of copy paper (US letter, 279 x 216 mm) on the table to the right of the container, tip pointing forward.
+  The grippers' finger pads are wrapped in masking tape (not modelled).
 
 The robot must write the use-by date given in the instruction on the label with the marker, so that a person can
 read it, and put the marker down. The marker leaves ink only where its nib presses on the container with a normal
@@ -130,9 +130,9 @@ M0 = np.array([0.20, -0.17, TOP + M_R + 0.0005])
 MARKER = part("marker", pos=tuple(float(v) for v in M0), mass=0.011, color=(0.62, 0.63, 0.65), friction=0.6,
               boxes=M_BOXES, contact_report=True)   # PhysX reports its contacts with the container
 
-# a sheet of copy paper under the marker (US letter folded in half, 216 x 140 mm, 0.1 mm), fixed: keeps ink off the
-# table where the marker is laid down
-PAPER = Box("paper", pos=(float(M0[0]), float(M0[1]), TOP + 0.00005), size=(0.216, 0.140, 0.0001),
+# a sheet of copy paper under the marker (US letter, 279 x 216 mm, 0.1 mm, long side along x), fixed: keeps ink off
+# the table where the marker is picked up and laid down and along the way to the container
+PAPER = Box("paper", pos=(float(M0[0]), float(M0[1]), TOP + 0.00005), size=(0.279, 0.216, 0.0001),
             color=(0.95, 0.95, 0.93))
 
 OBJECTS = [CONTAINER, MARKER, PAPER]
@@ -399,21 +399,31 @@ def _forms():
     flag1, base1 = [(0.15, 1.0), (0.0, 0.80)], [(0.0, 0.0), (0.30, 0.0)]
     four_bar, four_stem = [(0.0, 0.32), (w, 0.32)], [(0.75 * w, 1.0), (0.75 * w, 0.0)]
     seven_top, seven_diag = [(0.0, 1.0), (w, 1.0)], [(w, 1.0), (0.3 * w, 0.0)]
+    two_base, two_loop = [(0.0, 0.0), (w, 0.0)], _arc(0.12 * w, 0.09, 0.12 * w, 0.09, 0, 360, 13)
+    two_round = _arc(w / 2, 0.72, w / 2, 0.28, 160, -35) + [(0.0, 0.0)]
+    two_flat = [(0.05 * w, 1.0), (0.9 * w, 1.0), (0.0, 0.0)]                         # flat top, straight diagonal
+    nine_loop, six_loop = _arc(w / 2, 0.72, w / 2, 0.28, 0, 360, 25), _arc(w / 2, 0.30, w / 2, 0.30, 180, 540, 25)
     f = {   # char: (width, [(strokes, optional strokes), ...]); the first form is the one the demo writes
-        "0": (w, [([_arc(w / 2, 0.5, w / 2, 0.5, 90, 450, 33)], [])]),
+        "0": (w, [([_arc(w / 2, 0.5, w / 2, 0.5, 90, 450, 33)], []),
+                  ([_arc(w / 2, 0.5, w / 2, 0.5, 90, 450, 33)], [[(0.9 * w, 0.95), (0.1 * w, 0.05)]])]),  # slashed
         "1": (one, [([stem1], []), ([stem1], [flag1]), ([stem1], [base1]), ([stem1], [flag1, base1])]),
-        "2": (w, [([_arc(w / 2, 0.72, w / 2, 0.28, 160, -35) + [(0.0, 0.0)], [(0.0, 0.0), (w, 0.0)]], [])]),
+        "2": (w, [([two_round, two_base], []),
+                  ([two_round, two_base], [two_loop]),                                  # looped at the bottom
+                  ([two_flat, two_base], []),                                           # flat top ("Z")
+                  ([two_flat, two_base], [two_loop])]),
         "3": (w, [([_arc(w / 2, 0.75, w / 2, 0.25, 150, -90), _arc(w / 2, 0.25, w / 2, 0.25, 90, -150)], [])]),
         "4": (w, [([[(0.75 * w, 1.0), (0.0, 0.32)], four_bar, four_stem], []),           # closed top
                   ([[(0.1 * w, 1.0), (0.0, 0.32)], four_bar, four_stem], [])]),          # open top
         "5": (w, [([[(w, 1.0), (0.08 * w, 1.0)], [(0.08 * w, 1.0), (0.04 * w, 0.56)],
                     [(0.04 * w, 0.56)] + _arc(w / 2, 0.30, w / 2, 0.30, 120, -150)], [])]),
-        "6": (w, [([[(0.85 * w, 1.0), (0.2 * w, 0.62), (0.0, 0.30)], _arc(w / 2, 0.30, w / 2, 0.30, 180, 540, 25)], [])]),
+        "6": (w, [([[(0.85 * w, 1.0), (0.2 * w, 0.62), (0.0, 0.30)], six_loop], []),
+                  ([[(0.8 * w, 1.0), (0.0, 0.30)], six_loop], [])]),                    # straight stem
         "7": (w, [([seven_top, seven_diag], []),
                   ([seven_top, seven_diag], [[(0.3 * w, 0.5), (0.95 * w, 0.5)]])]),        # crossed
         "8": (w, [([_arc(w / 2, 0.75, 0.42 * w, 0.25, -90, 270, 25), _arc(w / 2, 0.27, w / 2, 0.27, 90, -270, 25)],
                    [])]),
-        "9": (w, [([_arc(w / 2, 0.72, w / 2, 0.28, 0, 360, 25), [(w, 0.72), (w, 0.4), (0.6 * w, 0.0)]], [])]),
+        "9": (w, [([nine_loop, [(w, 0.72), (w, 0.4), (0.6 * w, 0.0)]], []),
+                  ([nine_loop, [(w, 0.72), (w, 0.0)]], [])]),                           # straight stem
         "/": (slash, [([[(0.30, 1.0), (0.0, 0.0)]], [])]),
         "-": (0.35, [([[(0.0, 0.5), (0.35, 0.5)]], [])]),
     }
@@ -442,18 +452,19 @@ H_NOM = 30.0                   # mm: the demo writes 30 mm tall characters
 Z_MID = 1000 * (TAPE_Z0 + TAPE_Z1) / 2
 
 
-def layout(text: str, h: float):
-    """[(char, left s, width)] in mm for ``text`` written ``h`` mm tall starting at s = 0."""
+def layout(text: str, h: float, width: float = 1.0, gap: float = GAP):
+    """[(char, left s, width)] in mm for ``text`` written ``h`` mm tall (characters ``width`` times as wide, ``gap``
+    character heights apart) starting at s = 0."""
     out, s = [], 0.0
     for ch in text:
-        wd = GLYPHS[ch][0] * h
+        wd = GLYPHS[ch][0] * h * width
         out.append((ch, s, wd))
-        s += wd + GAP * h
+        s += wd + gap * h
     return out
 
 
-def text_width(text: str, h: float) -> float:
-    lay = layout(text, h)
+def text_width(text: str, h: float, width: float = 1.0, gap: float = GAP) -> float:
+    lay = layout(text, h, width, gap)
     return lay[-1][1] + lay[-1][2]
 
 
@@ -465,10 +476,41 @@ def resample(poly: np.ndarray, step: float) -> np.ndarray:
     return np.column_stack([np.interp(u, t, poly[:, 0]), np.interp(u, t, poly[:, 1])])
 
 
-def char_points(ch: str, h: float, step: float = 0.5, form: int = 0, extras=None) -> np.ndarray:
+# Handwriting varies: a character may be written narrower or wider than its form (WIDTHS, about its middle), and the
+# whole date may lean back or forward (SLANTS, degrees from upright, one slant for the whole date: a writer's slant
+# is steady). Between the listed values the COVER tolerance takes up the rest (about +-0.12 in width and +-5 degrees
+# of slant at 30 mm), so widths 0.7 to 1.4 and slants -25 to +25 degrees are read. A "1" and a "/" differ only in how
+# much they lean, so neither is widened or narrowed (that would tilt them): the slant alone sets their lean.
+WIDTHS = (1.0, 0.8, 1.25)            # the first is preferred on a tie
+SLANTS = (0.0, -10.0, 10.0, -20.0, 20.0)
+CHAR_WIDTHS = {"1": (1.0,), "/": (1.0,)}
+
+
+def shaped(stroke: np.ndarray, wd: float, width: float = 1.0, slant: float = 0.0) -> np.ndarray:
+    """A stroke (cell units, character ``wd`` wide) written ``width`` times as wide and leaning ``slant`` degrees
+    forward (top to the right), both about the middle of the cell."""
+    x = wd / 2 + (stroke[:, 0] - wd / 2) * width + math.tan(math.radians(slant)) * (stroke[:, 1] - 0.5)
+    return np.column_stack([x, stroke[:, 1]])
+
+
+def variant(ch: str, form: int, width: float = 1.0, slant: float = 0.0):
+    """(strokes, optional strokes) of ``form`` of ``ch`` at ``width`` and ``slant`` (cell units)."""
+    key = (ch, form, width, slant)
+    if key not in _VARIANTS:
+        wd, forms = FORMS[ch]
+        core, opt = forms[form]
+        _VARIANTS[key] = ([shaped(s, wd, width, slant) for s in core], [shaped(s, wd, width, slant) for s in opt])
+    return _VARIANTS[key]
+
+
+_VARIANTS: dict = {}
+
+
+def char_points(ch: str, h: float, step: float = 0.5, form: int = 0, extras=None, width: float = 1.0,
+                slant: float = 0.0) -> np.ndarray:
     """Points (mm) along one character ``h`` mm tall written in ``form`` (its strokes, plus the optional strokes
     listed in ``extras``, default all of the form's), its cell's bottom-left at (0, 0)."""
-    core, opt = FORMS[ch][1][form]
+    core, opt = variant(ch, form, width, slant)
     opt = opt if extras is None else [opt[i] for i in extras]
     return np.concatenate([resample(s * h, step) for s in list(core) + list(opt)])
 
@@ -480,15 +522,26 @@ NEAR = 3.0                     # mm: ink farther than this from the character's 
 STRAY_CHAR = 0.25              # more stray ink than this in a character's share: scribbled over, that character 0
 STRAY_ALL = 0.20               # more stray ink than this on the whole label: the text scores 0
 OTHER_MARGIN = 0.05            # another character reads better when it explains this much more of the ink,
-OTHER_COVER = 0.10             # or as much of it while this much more of its strokes' length is drawn
+OTHER_COVER = 0.05             # or as much of it while this much more of its strokes' length is drawn
+OTHER_MIN_COVER = 0.90         # another character is only read there when this much of its strokes' length is drawn
+OTHER_TOL = 0.05               # an unfinished character (or one with clearly less drawn) loses to another that explains
+                               # nearly as much (within this share) of the ink
 OFF_LABEL_MAX = 20.0           # mm of line off the label (on the container): score 0
 HEIGHTS = (24.0, 27.0, 30.0, 33.0, 36.0)
-SHIFT = 4                      # mm: each character may sit this far from its place in the fitted line
+SHIFT = 4                      # mm: each character may sit this far above or below its place in the fitted line
+GAPS = (GAP, 0.04, 0.25, 0.40)  # spacing between characters tried for the line, in character heights
+LINE_REFINE = 24               # the best coarse line fits refined at 1 mm and ranked
+LINE_TRIES = 3                 # the best line fits (each a different height or slant) are each read; the best counts
+DRIFT = 15                     # mm: a character may sit this far left or right of its place in the fitted line,
+SPACE_CHANGE = 0.35            # each space between neighbours differing from the line's by up to this many heights
+SPACE_COST = 0.05              # per height of difference: of two equally good placements, the more even one is kept
+_FINE = np.stack(np.meshgrid(np.arange(-2.0, 3.0), np.arange(-2.0, 3.0), indexing="ij"), -1).reshape(-1, 2)
 MOVED, TIPPED = 0.03, math.radians(20)
 GRID = 0.5
 S_RANGE, Z_RANGE = (-70.0, 70.0), (1000 * TAPE_Z0 - 6, 1000 * TAPE_Z1 + 6)
 _SHIFTS = np.stack(np.meshgrid(np.arange(-SHIFT, SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"),
                    -1).reshape(-1, 2)
+_LOCAL = np.stack(np.meshgrid(np.arange(-2.0, 3.0), np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"), -1).reshape(-1, 2)
 
 
 def _distance_grid(sz: np.ndarray) -> np.ndarray:
@@ -530,12 +583,12 @@ def _best_place(dist, pts, base, shifts=_SHIFTS):
     return float((d[i] <= COVER).mean()), shifts[i]
 
 
-def _form_fit(dist, ch, form, h, base):
+def _form_fit(dist, ch, form, h, base, width=1.0, slant=0.0, shifts=_SHIFTS):
     """(strokes drawn, share of the strokes drawn, all the form's points (mm, placed), share of its strokes' length
-    drawn) for one form at its best shift around ``base``."""
-    core, opt = FORMS[ch][1][form]
+    drawn) for one form (at ``width`` and ``slant``) at its best shift around ``base``."""
+    core, opt = variant(ch, form, width, slant)
     strokes = [resample(s * h, 1.0) for s in core]
-    cov, sh = _best_place(dist, np.concatenate(strokes), base)
+    cov, sh = _best_place(dist, np.concatenate(strokes), base, shifts)
     drawn = sum(float((_lookup(dist, s + base + sh) <= COVER).mean()) >= STROKE_DRAWN for s in strokes)
     pts = np.concatenate(strokes + [resample(s * h, 1.0) for s in opt]) + base + sh
     if opt:   # the optional strokes may sit a little differently (a longer flag, a lower bar)
@@ -552,18 +605,20 @@ def _explained(ink: np.ndarray, pts: np.ndarray) -> float:
     return float((cKDTree(pts).query(ink)[0] <= NEAR).mean()) if len(ink) else 0.0
 
 
-OTHER_SHIFT = 6                # mm: another character is looked for this far around a character's centre
+OTHER_SHIFT = 6                # mm: another character is looked for this far around a character's centre,
+OTHER_H, OTHER_SLANT = 0.0, 0.0  # and this much taller or shorter (mm) and more or less slanted (degrees)
 _OTHER_SHIFTS = np.stack(np.meshgrid(np.arange(-OTHER_SHIFT, OTHER_SHIFT + 1.0), np.arange(-SHIFT, SHIFT + 1.0),
                                      indexing="ij"), -1).reshape(-1, 2)
 
 
-def read_as_other(sz, dist, h, centre, n, line_pts, target, complete=True, cover=1.0):
+def read_as_other(sz, dist, h, centre, n, line_pts, target, complete=True, cover=1.0, slant=0.0, own=None):
     """Does the ink around character ``n`` (centre (s, z) mm) read better as another character? For every other
-    character and form whose strokes are all drawn there (within OTHER_SHIFT mm) by character n's share of the ink
-    (``dist``: its distance grid), compare how much of the ink in its
-    area the intended line explains (``line_pts``: each character's points) with how much the line explains with
-    character n swapped for it. Returns (char, explained by the swap, explained by the line) of the best swap that
-    explains OTHER_MARGIN more, or at least as much (-0.02) when character n is not ``complete`` (an unfinished
+    character and form (any width; the line's height and slant, or OTHER_H mm taller or shorter, or OTHER_SLANT
+    degrees more or less: what is written is looked for as it is, not only as the line was fitted) whose strokes are
+    all drawn there (within OTHER_SHIFT mm) by character n's share of the ink (``dist``: its distance grid), compare
+    how much of the ink in its area (and of character n's ``own`` ink) the intended line explains (``line_pts``: each
+    character's points) with how much the line explains with character n swapped for it. Returns (char, explained by the swap, explained by the line) of the best swap that
+    explains OTHER_MARGIN more, or nearly as much (within OTHER_TOL) when character n is not ``complete`` (an unfinished
     character that makes another, finished one reads as that one) or when OTHER_COVER more of the other character's
     strokes' length is drawn than of character n's (``cover``), else None."""
     from scipy.spatial import cKDTree
@@ -572,18 +627,25 @@ def read_as_other(sz, dist, h, centre, n, line_pts, target, complete=True, cover
     line = cKDTree(np.concatenate(line_pts))
     rest_tree = cKDTree(rest) if len(rest) else None
     best = None
+    slants = list(dict.fromkeys(a for a in (slant, slant - OTHER_SLANT, slant + OTHER_SLANT)
+                                if abs(a) <= max(map(abs, SLANTS))))
+    heights = list(dict.fromkeys((h, h - OTHER_H, h + OTHER_H)))
     for ch, (wd, forms) in FORMS.items():
         if ch == target:
             continue
-        base = centre - [wd * h / 2, h / 2]
-        for core, opt in forms:
-            strokes = [resample(s * h, 1.0) for s in core]
+        for hh, a, (core, opt) in ((hh, a, variant(ch, f, k, a)) for hh in heights
+                                   for a in slants for f in range(len(forms)) for k in CHAR_WIDTHS.get(ch, WIDTHS)):
+            base = centre - [wd * hh / 2, hh / 2]
+            strokes = [resample(s * hh, 1.0) for s in core]
             cov, sh = _best_place(dist, np.concatenate(strokes), base, _OTHER_SHIFTS)
-            if not all(float((_lookup(dist, s + base + sh) <= COVER).mean()) >= STROKE_DRAWN for s in strokes):
+            if cov < OTHER_MIN_COVER or not all(float((_lookup(dist, s + base + sh) <= COVER).mean()) >= STROKE_DRAWN
+                                                for s in strokes):
                 continue
-            pts = np.concatenate(strokes + [resample(s * h, 1.0) for s in opt]) + base + sh
+            pts = np.concatenate(strokes + [resample(s * hh, 1.0) for s in opt]) + base + sh
             lo, hi = pts.min(0) - NEAR, pts.max(0) + NEAR
             ink = sz[np.all((sz >= lo) & (sz <= hi), axis=1)]
+            if own is not None and len(own):   # and all of character n's own ink: the swap has to account for it
+                ink = np.unique(np.concatenate([ink, own]), axis=0)
             if len(ink) < 5:
                 continue
             e_line = float((line.query(ink)[0] <= NEAR).mean())
@@ -591,17 +653,78 @@ def read_as_other(sz, dist, h, centre, n, line_pts, target, complete=True, cover
             if rest_tree is not None:
                 d_swap = np.minimum(d_swap, rest_tree.query(ink)[0])
             e_swap = float((d_swap <= NEAR).mean())
-            margin = OTHER_MARGIN if complete and cov < cover + OTHER_COVER else -0.02
+            margin = OTHER_MARGIN if complete and cov < cover + OTHER_COVER else -OTHER_TOL
             if e_swap > e_line + margin and (best is None or e_swap - e_line > best[1] - best[2]):
                 best = (ch, e_swap, e_line)
     return best
 
 
-def read_label(sz: np.ndarray, text: str = TEXT) -> dict:
-    """Score the ink on the label (``sz``: (N, 2) label coordinates in mm) as ``text``.
+def _line_fits(sz, dist, text):
+    """The best LINE_TRIES fits of the text's line to the ink, each a different (height, slant): (quality, (h, slant,
+    width, spacing, (s0, z0))), best first. Every height, slant, width and spacing is placed on a 2 mm grid, ranked by coverage + the
+    share of the ink it explains (a line written too small fits inside larger writing: it is covered, but leaves ink
+    unexplained); the best LINE_REFINE are placed again at 1 mm and ranked the same way."""
+    coarse = []
+    for sl, k, g, h in ((sl, k, g, h) for sl in SLANTS for k in WIDTHS for g in GAPS for h in HEIGHTS):
+        pts = np.concatenate([char_points(c, h, 1.0, width=1.0 if c in CHAR_WIDTHS else k, slant=sl)
+                              + [s + (wd - FORMS[c][0] * h) / 2, 0.0] for c, s, wd in layout(text, h, k, g)])
+        width = text_width(text, h, k, g)
+        s0 = np.arange(S_RANGE[0], S_RANGE[1] - width + 1e-9, 2.0)
+        z0 = np.arange(Z_RANGE[0], Z_RANGE[1] - h + 1e-9, 2.0)
+        if not len(s0) or not len(z0):
+            continue
+        off = np.stack(np.meshgrid(s0, z0, indexing="ij"), -1).reshape(-1, 2)
+        cov, sh = _best_place(dist, pts, np.zeros(2), off)
+        coarse.append((cov + _explained(sz, pts + sh), len(coarse), (sl, k, g, h), pts, sh))
+    refined = []
+    for _, i, (sl, k, g, h), pts, sh in sorted(coarse, key=lambda c: (-c[0], c[1]))[:LINE_REFINE]:
+        cov, fine = _best_place(dist, pts, sh, _FINE)
+        refined.append((cov + _explained(sz, pts + sh + fine), i, (h, sl, k, g, sh + fine)))
+    out, seen = [], set()
+    for q, _, line in sorted(refined, key=lambda r: (-r[0], r[1])):
+        if line[:2] not in seen and len(out) < LINE_TRIES:
+            seen.add(line[:2])
+            out.append((q, line))
+    return out
 
-    1. Fit the text's line (height 24 to 36 mm, place on the tape) to the ink.
-    2. Each character: place each of its accepted forms within +-SHIFT mm of its place in the line; count its
+
+def _place(dist, places, h, sl, z0, variants):
+    """Where each character sits along the line (elastic, for uneven spacing): an offset of up to DRIFT mm from its
+    place in the fitted line, each space between neighbours changing by at most SPACE_CHANGE heights; the offsets that
+    cover the most of the characters' strokes (each at its best form, width and height within +-SHIFT mm), less
+    SPACE_COST per height of change in spacing (dynamic programming over 1 mm steps)."""
+    dxs = np.arange(-DRIFT, DRIFT + 1.0)
+    offs = np.stack(np.meshgrid(dxs, np.arange(-SHIFT, SHIFT + 1.0), indexing="ij"), -1).reshape(-1, 2)
+    covs = []
+    for ch, s, _ in places:
+        best = np.zeros(len(dxs))
+        for f, k in variants[ch]:
+            pts = np.concatenate([resample(st * h, 1.0) for st in variant(ch, f, k, sl)[0]])
+            d = _lookup(dist, pts[None] + [s, z0] + offs[:, None])
+            best = np.maximum(best, (d <= COVER).mean(1).reshape(len(dxs), -1).max(1))
+        covs.append(best - 1e-4 * np.abs(dxs))
+    change = dxs[None, :] - dxs[:, None]                       # [previous, next]: change of the space between them
+    step = np.where(np.abs(change) <= SPACE_CHANGE * h, -SPACE_COST * np.abs(change) / h, -np.inf)
+    score, back = covs[0], []
+    for cov in covs[1:]:
+        tot = score[:, None] + step
+        arg = tot.argmax(0)
+        back.append(arg)
+        score = tot[arg, np.arange(len(dxs))] + cov
+    path = [int(score.argmax())]
+    for arg in reversed(back):
+        path.append(int(arg[path[-1]]))
+    return [float(dxs[j]) for j in reversed(path)]
+
+
+def read_label(sz: np.ndarray, text: str = TEXT) -> dict:
+    """Score the ink on the label (``sz``: (N, 2) label coordinates in mm) as ``text``, as a person reads it: the
+    reading (of the best LINE_TRIES line fits) that gives the most credit counts, except that a character that a
+    reading fitting the ink at least as well sees as another character gets nothing.
+
+    1. Fit the text's line (height 24 to 36 mm, slant, character width, spacing, place on the tape) to the ink.
+    2. Place the characters along it (``_place``: uneven spacing). Each character: its accepted forms, at each width
+       (WIDTHS) and the line's slant, within 2 mm (left/right) and +-SHIFT mm (up/down) of that place; count its
        strokes drawn (STROKE_DRAWN of the length within COVER mm of ink); keep the form with the most strokes drawn
        (then the one explaining the most of the character's ink).
     3. Share out the ink: each inked cell goes to the nearest character; farther than NEAR mm from every character's
@@ -610,55 +733,73 @@ def read_label(sz: np.ndarray, text: str = TEXT) -> dict:
        the ink is farther than NEAR from its strokes (scribbled over, extra marks), or if the ink reads as another
        character (``read_as_other``).
     5. The text = mean character credit, 0 if more than STRAY_ALL of all the ink is stray."""
-    from scipy.spatial import cKDTree
-
     n_ch = len(text)
     res = {"chars": [0.0] * n_ch, "strokes": [0] * n_ch, "form": [0] * n_ch, "reads": [None] * n_ch,
-           "stray": 1.0, "h": None, "text": 0.0}
+           "width": [1.0] * n_ch, "stray": 1.0, "h": None, "slant": 0.0, "text": 0.0}
     sz = inked(sz)
     if len(sz) < 10:
         return res
     dist = _distance_grid(sz)
-    best = (-1.0, None)
-    for h in HEIGHTS:
-        pts = np.concatenate([char_points(c, h, 1.0) + [s, 0.0] for c, s, _ in layout(text, h)])
-        width = text_width(text, h)
-        s0 = np.arange(S_RANGE[0], S_RANGE[1] - width + 1e-9, 1.0)
-        z0 = np.arange(Z_RANGE[0], Z_RANGE[1] - h + 1e-9, 1.0)
-        if not len(s0) or not len(z0):
-            continue
-        off = np.stack(np.meshgrid(s0, z0, indexing="ij"), -1).reshape(-1, 2)
-        cov, sh = _best_place(dist, pts, np.zeros(2), off)
-        if cov > best[0] + 1e-9:
-            best = (cov, (h, sh))
-    if best[1] is None:
-        return res
-    h, (s0, z0) = best[1]
-    res["h"] = h
+    best, q_best, reads = res, 0.0, []
+    for q, line in _line_fits(sz, dist, text):
+        r = _read_line(sz, dist, text, *line)
+        reads.append((q, {n for n, c in enumerate(r["reads"]) if c is not None and c != text[n]}))
+        if (r["text"], -r["stray"]) > (best["text"], -best["stray"]) or best["h"] is None:
+            best, q_best = r, q
+    # a character that another reading, fitting the ink at least as well, reads as another character: no credit
+    changed = False
+    for q, other in reads:
+        for n in other:
+            if q >= q_best - 1e-9 and best["reads"][n] == text[n]:
+                best["chars"][n], best["reads"][n], changed = 0.0, "?", True
+    if changed and best["stray"] <= STRAY_ALL:
+        best["text"] = float(np.mean(best["chars"]))
+    return best
+
+
+def _read_line(sz, dist, text, h, sl, k_line, g_line, s0z0) -> dict:
+    """Steps 2 to 5 of ``read_label`` for one fitted line."""
+    from scipy.spatial import cKDTree
+
+    n_ch = len(text)
+    res = {"chars": [0.0] * n_ch, "strokes": [0] * n_ch, "form": [0] * n_ch, "reads": [None] * n_ch,
+           "width": [1.0] * n_ch, "stray": 1.0, "h": h, "slant": sl, "text": 0.0}
+    s0, z0 = s0z0
+    variants = {ch: [(f, k) for f in range(len(FORMS[ch][1])) for k in CHAR_WIDTHS.get(ch, WIDTHS)]
+                for ch in set(text)}
+    # each character's cell (its form's width, unscaled) centred on its place in the fitted line, then placed
+    places = [(ch, s0 + s + (wd - FORMS[ch][0] * h) / 2, wd) for ch, s, wd in layout(text, h, k_line, g_line)]
+    dx = _place(dist, places, h, sl, z0, variants)
+    places = [(ch, s + d, wd) for (ch, s, wd), d in zip(places, dx)]
     fits = []
-    for n, (ch, s, wd) in enumerate(layout(text, h)):
-        base = np.array([s0 + s, z0])
-        fits.append([(_form_fit(dist, ch, f, h, base), f) for f in range(len(FORMS[ch][1]))])
-    # share out the ink: nearest character (over all its forms' points); stray if farther than NEAR from all
-    owner_pts = [np.concatenate([c[0][2] for c in cand]) for cand in fits]
+    for ch, s, wd in places:
+        base = np.array([s, z0])
+        fits.append([(_form_fit(dist, ch, f, h, base, k, sl, _LOCAL), f) for f, k in variants[ch]])
+    # share out the ink: nearest character (over the points of its best-fitting forms: the most strokes drawn, and
+    # nearly the best share of their length; not a poor fit that slid over to a neighbour's ink); stray if farther
+    # than NEAR from all
+    owner_pts = []
+    for cand in fits:
+        top = max((c[0][0], c[0][3]) for c in cand)
+        owner_pts.append(np.concatenate([c[0][2] for c in cand if c[0][0] == top[0] and c[0][3] >= top[1] - 0.10]))
     dmin = np.stack([cKDTree(p).query(sz)[0] for p in owner_pts])
     owner = np.argmin(dmin, 0)
     res["stray"] = float((dmin.min(0) > NEAR).mean())
     chosen = []
-    for n, (ch, s, wd) in enumerate(layout(text, h)):
+    for n, (ch, s, wd) in enumerate(places):
         mine = sz[owner == n]                      # this character's share of the ink
         # the strokes again, drawn by this character's own share of the ink only (not by its neighbours')
-        local, base = _distance_grid(mine), np.array([s0 + s, z0])
-        cand = [(_form_fit(local, ch, f, h, base), f) for f in range(len(FORMS[ch][1]))]
-        (drawn, share, pts, cov), f = max(cand, key=lambda c: (c[0][0], _explained(mine, c[0][2])))
-        chosen.append((drawn, share, pts, cov, f, mine))
+        local, base = _distance_grid(mine), np.array([s, z0])
+        cand = [(_form_fit(local, ch, f, h, base, k, sl, _LOCAL), (f, k)) for f, k in variants[ch]]
+        (drawn, share, pts, cov), fk = max(cand, key=lambda c: (c[0][0], _explained(mine, c[0][2])))
+        chosen.append((drawn, share, pts, cov, fk, mine))
     line_pts = [c[2] for c in chosen]
-    for n, (drawn, share, pts, cov, f, mine) in enumerate(chosen):
-        res["strokes"][n], res["form"][n] = int(drawn), f
+    for n, (drawn, share, pts, cov, (f, k), mine) in enumerate(chosen):
+        res["strokes"][n], res["form"][n], res["width"][n] = int(drawn), f, k
         if len(mine) == 0 or _explained(mine, pts) < 1.0 - STRAY_CHAR:
             continue
-        other = read_as_other(sz, _distance_grid(mine), h, np.array([np.median(pts[:, 0]), z0 + h / 2]), n, line_pts, text[n],
-                              share >= 1.0, cov)
+        other = read_as_other(sz, dist, h, np.array([np.median(pts[:, 0]), z0 + h / 2]), n,
+                              line_pts, text[n], share >= 1.0, cov, sl, mine)
         res["reads"][n] = other[0] if other else text[n]
         if other is None:
             res["chars"][n] = float(share)

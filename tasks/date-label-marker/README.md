@@ -50,10 +50,12 @@ container away, too lightly leaves gaps in the strokes.
 - **Contents:** about 470 ml of room-temperature tap water (not food: nothing perishable, the same every trial). Fill
   until container, water and lid weigh 500 g on a kitchen scale, press the lid on and seal it with a strip of masking
   tape around the rim. The contents only set the mass that the other hand must hold steady.
-- **Paper:** one sheet of 20 lb (75 g/m2) copy paper, US letter folded in half (216 x 140 mm), long side along x,
-  centred under the marker and taped to the table at its corners. It keeps the ink off the shared table where the
-  marker is picked up and laid down. The grippers hold the marker only by its barrel, away from the tip (the demo
-  grips it 6 cm behind the tip), so the pads never touch the ink.
+- **Paper:** one sheet of 20 lb (75 g/m2) copy paper, US letter (279 x 216 mm), long side along x, centred under
+  the marker and taped to the table at its corners. It keeps the ink off the shared table where the marker is picked
+  up and laid down and along the way to the container; it is replaced when inked.
+- **Gripper covers:** the grippers hold the marker only by its barrel, away from the tip (the demo grips it 6 cm
+  behind the tip). Each finger pad is also wrapped in one layer of the same masking tape, replaced if it gets ink on
+  it, so a slip of the open marker marks only the tape.
 
 | Data | Value | Simulation |
 |---|---|---|
@@ -71,7 +73,7 @@ container away, too lightly leaves gaps in the strokes.
 | Container | centre x 30, y 0 cm, on a taped outline | 0.5 kg with water and lid | Free; friction 0.5; drawn light blue-grey (water behind clear plastic) below 10 cm, clear above |
 | Label | tape strip about 10.5 cm long around the side, centred on the side facing the right arm (front right, 45 degrees from -x toward -y) | in the container | 0.1 mm proud of the wall |
 | Marker | lying along x, tip forward (+x), its middle (6 cm behind the tip) at x 20, y -17 cm, on the paper | 11 g | Free; friction 0.6 |
-| Paper | 21.6 x 14 cm, 0.1 mm, centred under the marker, long side along x | - | Fixed (taped down) |
+| Paper | 27.9 x 21.6 cm, 0.1 mm, centred under the marker, long side along x | - | Fixed (taped down) |
 
 Positions are from the midpoint between the two arm bases (x forward, y left, z up).
 
@@ -111,64 +113,84 @@ person reading the label:
 **Character credit (the same rule for a person and for the simulation).** Each character is made of strokes; its
 credit is the number of its strokes drawn divided by its number of strokes:
 
-| Character | Strokes | Which |
-|---|---|---|
-| `0` | 1 | the oval |
-| `1` | 1 | the upright (a flag at the top and/or a base line may be added; they are not counted) |
-| `2` | 2 | hook with diagonal; base line |
-| `3` | 2 | upper bowl; lower bowl |
-| `4` | 3 | diagonal (closed top) or left upright (open top); crossbar; upright |
-| `5` | 3 | top bar; short upright; bowl |
-| `6` | 2 | stem; loop |
-| `7` | 2 | top bar; diagonal (a cross bar may be added; not counted) |
-| `8` | 2 | upper loop; lower loop |
-| `9` | 2 | loop; stem |
-| `/` | 1 | the slash |
-| `-` | 1 | the bar |
+| Character | Strokes | Which | Accepted forms |
+|---|---|---|---|
+| `0` | 1 | the oval | plain or slashed (the slash is not counted) |
+| `1` | 1 | the upright | plain, with a flag at the top, a base line, or both (not counted) |
+| `2` | 2 | hook with diagonal; base line | round or flat top, with or without a small loop where the diagonal meets the base (not counted) |
+| `3` | 2 | upper bowl; lower bowl | round |
+| `4` | 3 | diagonal (closed top) or left upright (open top); crossbar; upright | closed or open top |
+| `5` | 3 | top bar; short upright; bowl | plain |
+| `6` | 2 | stem; loop | curved or straight stem |
+| `7` | 2 | top bar; diagonal | plain or crossed (the cross bar is not counted) |
+| `8` | 2 | upper loop; lower loop | plain |
+| `9` | 2 | loop; stem | curved or straight stem |
+| `/` | 1 | the slash | plain |
+| `-` | 1 | the bar | plain |
 
 A stroke is drawn when at least 80 % of its length is inked: the gaps along it, measured with a ruler, add up to no
 more than 20 % of its length. A character scores 0 if it reads as another character (for example a `7` where a `1`
-should be, or a `3` where an `8` should be, even if some strokes of the right one are there), or if more than a quarter
-of its ink is off its strokes (scribbled over or crossed out). Characters 24 to 36 mm tall, anywhere on the tape,
-count. Examples: `11/22` with the last `2`'s base line missing scores 0.8 x (1 + 1 + 1 + 1 + 0.5) / 5 = 0.72; with an
-open-top `4` missing its upright, that `4` gets 2/3.
+should be, a `3` where an `8` should be, or a flat-top `2` without its base line, which is a `7`), or if more than a
+quarter of its ink is off its strokes (scribbled over or crossed out). Handwriting is read as written: characters 24
+to 36 mm tall, anywhere on the tape, upright or slanted up to about 25 degrees either way, narrower or wider (0.7 to
+1.4 times the forms' width), with even or uneven spacing. Examples: `11/22` with the last `2`'s base line missing
+scores 0.8 x (1 + 1 + 1 + 1 + 0.5) / 5 = 0.72; with an open-top `4` missing its upright, that `4` gets 2/3.
 
 **How the simulation reads the label.** Every accepted form of each character has stroke skeletons (`task.FORMS`; the
-first form of each is what the scripted demo writes; `1` also with a flag, a base or both, `4` also open-top, `7` also
-crossed). The reader:
+first form of each is what the scripted demo writes). The reader:
 
-1. fits the whole date to the ink: character height 24 to 36 mm, any place on the tape (ties broken by the closest
-   fit);
-2. places each character's forms within 4 mm of its place in the line (uneven spacing);
+1. fits the whole date to the ink: character height 24 to 36 mm, slant (-20 to +20 degrees in 10 degree steps, one
+   slant for the whole date), character width (0.8, 1 or 1.25 times the forms') and spacing, any place on the tape;
+   the fits are ranked by the share of the skeletons covered plus the share of the ink they explain, and the best
+   three (each a different height or slant) are each read as below; the reading with the most credit counts;
+2. places the characters along the line elastically: each may move up to 15 mm from its place in the fitted line, each
+   space between neighbours growing or shrinking by up to 0.35 character heights (uneven spacing), and up to 4 mm up
+   or down;
 3. divides the ink: each inked 0.5 mm cell goes to the nearest character; farther than 3 mm from every character's
    strokes it is stray;
-4. counts, for each character, its strokes drawn by its own share of the ink: a stroke is drawn when 80 % of the points
-   along it have ink within 2.5 mm; it keeps the form with the most strokes drawn;
-5. gives 0 to a character if more than 25 % of its share of the ink is farther than 3 mm from its strokes, or if its
-   ink reads as another character: some other character (any form, placed within 6 mm) has all its strokes drawn by
-   that ink and explains (ink within 3 mm) more of the ink around it than the intended character does (5 points more;
-   or as much, if the intended character is not complete or if a clearly larger share (10 points) of the other
-   character's stroke length is drawn);
+4. counts, for each character, its strokes drawn by its own share of the ink, over all its forms and widths: a stroke
+   is drawn when 80 % of the points along it have ink within 2.5 mm; it keeps the form with the most strokes drawn;
+5. gives 0 to a character if more than 25 % of its share of the ink is farther than 3 mm from its strokes, or if the
+   ink reads as another character: some other character (any form and width, placed within 6 mm, looked for in all
+   the ink there, not only this character's share) has at least 90 % of its stroke length and all its strokes drawn
+   there and explains (ink within 3 mm) more of the ink around it and of the character's own ink than the intended
+   character does (5 points more; or nearly as much, within 5 points, if the intended character is not complete or if
+   a larger share (5 points) of the other character's stroke length is drawn); a character that another of the three
+   readings, fitting the ink at least as well, reads as another character also gets 0;
 6. gives the text 0 if more than 20 % of all the ink on the tape is stray.
 
 The reader works on the inked area (0.5 mm cells), not on how the ink got there: going over a line again changes
 nothing, as for a person looking at the label afterwards.
 
+**Checked against handwriting it was not built from.** The tests (`test_date_label_marker.py`) write dates with a
+separate set of hand-made letterforms (`HAND`: other proportions and curves than the reader's skeletons, every form in
+the table above), with a slow wobble and 0.3 mm jitter along every stroke, and compare the reader with the stroke rule
+above:
+
+- every form of every character, in a date, reads in full;
+- `11/22` slanted -20 to +20 degrees, 0.75 to 1.35 times as wide, 1 to 10 mm between characters, 25 to 35 mm tall,
+  with characters of uneven size and off the line, and mixes of all of these, reads in full; so do nine other dates
+  with random slant, width, spacing, size and offsets;
+- with strokes left out, each character gets the credit the stroke rule gives (a looped or round `2` without its base
+  line 1/2, an open-top `4` without its upright 2/3, a missing `1` 0), and a flat-top `2` without its base reads as a
+  `7` and gets 0, as a person would read it;
+- other dates written in the same varied hands (`11/23`, `17/22` with a crossed `7`, `04/30` for `09/30` with an
+  open-top `4`, ...) get 0 for the wrong character.
+
 Doing nothing scores 0. Scribbling over the label, filling it, or writing another date scores 0 for every wrong
 character (tested: `88/88` scores 0; `11/23`, `17/22`, `11-22` and every other single wrong digit get 0 for the wrong
-character; dates such as `03/09`, `12/05`, `10/31` read in full when written as shown). Writing the right date but
-leaving the marker in the hand scores 0.8. The tests (`test_date_label_marker.py`) check these cases.
+character). Writing the right date but leaving the marker in the hand scores 0.8.
 
 ## Verified in simulation
 
 | Run | Host / GPU | Steps | Score |
 |---|---|---|---|
-| Scripted demo (task.py sha256 4e5bf641cfd9d4e6) | shiva, RTX A6000 (GPU 1) | 1,319 of 1,600 (success) | 1.0 |
-| Dream-1 (same task.py) | shiva, RTX A6000 (GPU 1) | 1,600 of 1,600 (step limit) | 0.0: the right arm reaches the marker on its paper sheet and turns it but never picks it up; no ink reaches the label |
+| Scripted demo (task.py sha256 714b7f9ad65dcf3d) | shiva, RTX A6000 (GPU 1) | 1,319 of 1,600 (success) | 1.0 |
+| Dream-1 (same task.py) | shiva, RTX A6000 (GPU 1) | 1,600 of 1,600 (step limit) | 0.0: both arms rise and stay folded near their bases; the right gripper hovers by the paper's edge but never reaches the marker, which stays where it lies; no ink reaches the label |
 
-In this run every character has all its strokes drawn and reads as itself (`1`, `1`, `/`, `2`, `2`); 0.4 % of the ink
-is stray. Nib force while ink was laid (logged in an identical debug run of the same plan, `DEMO_STEP_S=0.4` set by
-environment, same video): median 1.0 N, 5th to 95th percentile 0.66 to 1.43 N, peak 2.4 N, inside the handwriting range
+In this run every character has all its strokes drawn and reads as itself (`1`, `1`, `/`, `2`, `2`), as the score of
+1.0 requires. Nib force while ink was laid (logged in a debug run of the same plan on the previous version, whose ink
+model is unchanged, `DEMO_STEP_S=0.4` set by environment): median 1.0 N, 5th to 95th percentile 0.66 to 1.43 N, peak 2.4 N, inside the handwriting range
 above except the peak.
 
 Scripted demo: the left hand puts its closed fingers against the back of the container, across from the label, about
@@ -188,9 +210,7 @@ then lays the marker back on the paper where it was and lets go. It plays a fixe
   inks at lower force. Forces above normal handwriting also ink (no upper limit). The force is PhysX's rigid contact
   force between a rigid nib and a rigid wall: no felt-tip or tape compliance, no line-width, angle, speed or ink-flow
   model. The tape is crepe paper and does not wrap a cone perfectly flat; here it is a flat band.
-- **Reader:** the stroke-skeleton match is a proxy for a person reading the label. It accepts the listed forms (`1`
-  plain, with a flag, a base or both; `4` closed or open-top; `7` plain or crossed; one form for the other
-  characters); other readable handwriting (strongly slanted, very rounded or looped digits) may score lower.
-- **Paper:** fixed to the table (taped down); ink on it is not simulated.
+- **Paper:** fixed to the table (taped down); ink on it is not simulated. The tape on the finger pads is not modelled
+  (0.1 mm).
 - **Rendering:** the container wall is drawn opaque (the water's colour behind clear plastic).
 - Round parts are flat-faceted prisms.
